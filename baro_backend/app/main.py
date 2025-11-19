@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from .schemas import ChatRequest, ChatResponse
-from .graph import run_agent
+from .common.graph import run_agent
 
 logger = logging.getLogger(__name__)
 

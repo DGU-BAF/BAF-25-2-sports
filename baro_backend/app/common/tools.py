@@ -2,7 +2,7 @@
 from typing import Optional, List, Dict, Any
 from langchain_core.tools import tool
 
-from .db import get_nearby_facilities
+from ..core.db import get_nearby_facilities
 
 
 @tool

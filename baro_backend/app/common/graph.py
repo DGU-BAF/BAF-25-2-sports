@@ -4,7 +4,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 import logging
 
-from .config import OPENAI_API_KEY
+from ..core.config import OPENAI_API_KEY
 from .tools import nearby_sports_facilities
 
 logger = logging.getLogger(__name__)
