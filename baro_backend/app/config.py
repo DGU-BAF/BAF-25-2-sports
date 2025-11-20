@@ -6,6 +6,7 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_KEY = SUPABASE_ANON_KEY
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 KMA_API_KEY = os.getenv("KMA_API_KEY")
 
