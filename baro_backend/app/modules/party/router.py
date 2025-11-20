@@ -156,31 +156,11 @@ def create_party(data: CreateParty):
 # -----------------------------
 # 파티 목록 조회
 # -----------------------------
-@router.get("", response_model=list[PartySummary])
+@router.get("", response_model=list[PartyDetail])
 def get_party_list():
-    summaries: list[PartySummary] = []
-
-    for party in MOCK_PARTIES.values():
-        summaries.append(
-            PartySummary(
-                partyId=party.partyId,
-                title=party.title,
-                sport=party.sport,
-                place=party.place,
-                description=party.description,
-                date=party.date,
-                startTime=party.startTime,
-                endTime=party.endTime,
-                capacity=party.capacity,
-                current=party.current,
-                hostId=party.hostId,
-                status=party.status,
-                isJoined=party.isJoined,
-                createdAt=party.createdAt,
-            )
-        )
-
-    return summaries
+    # MOCK_PARTIES 안에 이미 PartyDetail 객체들이 들어 있으니까
+    # 그대로 리스트로 만들어 반환한다 (members 포함)
+    return list(MOCK_PARTIES.values())
 
 
 # -----------------------------
