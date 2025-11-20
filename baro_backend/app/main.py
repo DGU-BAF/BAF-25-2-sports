@@ -9,6 +9,8 @@ from .weather import get_simple_weather
 
 # 🔽 추가
 from .modules.auth.router import router as auth_router  # NEW
+from app.modules.bot.router import router as bot_router
+from app.modules.party.router import router as party_router
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)  # NEW
+app.include_router(bot_router)
+app.include_router(party_router)
 
 
 def is_weather_only_query(msg: str) -> bool:
