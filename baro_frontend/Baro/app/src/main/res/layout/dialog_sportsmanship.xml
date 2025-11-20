@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="310dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- 제목 -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="\n스포츠맨십이란?"
+        android:layout_gravity="center"
+        android:textColor="@color/black"
+        android:textSize="25sp" />
+
+    <!-- 설명 본문 -->
+    <TextView
+        android:id="@+id/tvBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:lineSpacingExtra="4dp"
+        android:text="\n사용자의 스포츠맨십과 협동성을 나타내는 지표입니다.기본 온도는 36.5도이며, 파티에서 받은 별점 평가에 따라 변동됩니다.\n\n
+· 별 5개 → +2도\n
+· 별 4개 → +1도\n
+· 별 3개 → 0도 (유지)\n
+· 별 2개 → -1도\n
+· 별 1개 → -2도\n\n
+한 파티에서는 평가를 해준 팀원들의 평균으로 계산되며,
+한 번의 파티로는 최대 ±2도까지만 변동됩니다.\n\n"
+        android:textColor="@color/black"
+        android:textSize="18sp" />
+
+</LinearLayout>

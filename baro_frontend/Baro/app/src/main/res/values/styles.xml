@@ -1,0 +1,34 @@
+<resources>
+    <!-- 앱 전체에서 사용할 기본 텍스트 스타일 -->
+    <style name="App.TextAppearance" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/gmarketsansmedium</item>
+        <item name="android:fontFamily">@font/gmarketsansmedium</item>
+    </style>
+
+    <!-- 볼드 버전 필요할 때 -->
+    <style name="App.TextAppearance.Bold" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/gmarketsansbold</item>
+        <item name="android:fontFamily">@font/gmarketsansbold</item>
+    </style>
+
+    <!-- 라이트 버전 필요할 때 -->
+    <style name="App.TextAppearance.Light" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/gmarketsanslight</item>
+        <item name="android:fontFamily">@font/gmarketsanslight</item>
+    </style>
+
+    <style name="HintStyle">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/grey</item>
+    </style>
+
+    <style name="MyRatingBar" parent="@style/Widget.AppCompat.RatingBar">
+        <!-- 별 아이콘 높이 통일 -->
+        <item name="android:minHeight">48dp</item>
+        <item name="android:maxHeight">48dp</item>
+    </style>
+
+
+
+
+</resources>

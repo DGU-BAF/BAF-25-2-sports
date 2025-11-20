@@ -1,0 +1,32 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.Baro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <!-- Customize your theme here. -->
+
+        <!-- 여기에 폰트 설정 추가 -->
+        <item name="textAppearanceBodySmall">@style/App.TextAppearance</item>
+        <item name="textAppearanceBodyMedium">@style/App.TextAppearance</item>
+        <item name="textAppearanceBodyLarge">@style/App.TextAppearance</item>
+        <item name="textAppearanceTitleSmall">@style/App.TextAppearance</item>
+        <item name="textAppearanceTitleMedium">@style/App.TextAppearance</item>
+        <item name="textAppearanceTitleLarge">@style/App.TextAppearance</item>
+
+        <!-- ✅ 앱 전체 폰트를 GmarketSans Medium으로 통일 -->
+        <item name="fontFamily">@font/gmarketsansmedium</item>
+        <item name="android:fontFamily">@font/gmarketsansmedium</item>
+
+    </style>
+
+\
+
+</resources>

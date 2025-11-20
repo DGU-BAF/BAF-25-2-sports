@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 회색 빈 별 -->
+    <item android:id="@android:id/background">
+        <bitmap
+            android:src="@drawable/star_grey"
+            android:tileMode="repeat" />
+    </item>
+
+    <!-- 채워진 노란 별 (clip 중요!!) -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <bitmap
+                android:src="@drawable/star_yellow"
+                android:tileMode="repeat" />
+        </clip>
+    </item>
+
+</layer-list>

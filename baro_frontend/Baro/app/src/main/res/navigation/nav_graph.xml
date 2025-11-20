@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/navigation_home">
+
+    <!-- 홈 탭 -->
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.baro.feature.home.HomeFragment"
+        android:label="홈"
+        tools:layout="@layout/fragment_home">
+
+        <!-- 홈 -> 파티 상세 -->
+        <action
+            android:id="@+id/action_navigation_home_to_navigation_party_detail"
+            app:destination="@id/navigation_party_detail" />
+
+        <!-- 홈 -> 파티 생성 -->
+        <action
+            android:id="@+id/action_navigation_home_to_partyCreate"
+            app:destination="@id/partyCreateFragment" />
+
+        <action
+            android:id="@+id/action_homeFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
+
+    </fragment>
+
+    <!-- 메시지 탭: 대화방 목록 화면 -->
+    <fragment
+        android:id="@+id/navigation_message"
+        android:name="com.example.baro.feature.message.ui.list.MessageListFragment"
+        android:label="채팅"
+        tools:layout="@layout/fragment_message">
+
+        <!-- 대화방(채팅방)으로 이동 액션 -->
+        <action
+            android:id="@+id/actionMessageListFragmentToMessageRoomFragment"
+            app:destination="@id/messageRoomFragment" />
+    </fragment>
+
+    <!-- 채팅방 화면 (파티별 메시지 룸) -->
+    <fragment
+        android:id="@+id/messageRoomFragment"
+        android:name="com.example.baro.feature.message.ui.room.MessageRoomFragment"
+        android:label="대화방"
+        tools:layout="@layout/fragment_message_room">
+
+        <!-- 어떤 파티의 채팅방인지 -->
+        <argument
+            android:name="roomId"
+            app:argType="string" />
+
+        <argument
+            android:name="roomName"
+            app:argType="string" />"
+    </fragment>
+
+    <!-- 챗봇 탭 -->
+    <fragment
+        android:id="@+id/navigation_bot"
+        android:name="com.example.baro.feature.bot.ui.list.BotChatListFragment"
+        android:label="챗봇 목록"
+        tools:layout="@layout/fragment_bot">
+
+        <action
+            android:id="@+id/actionBotChatListFragmentToBotChatRoomFragment"
+            app:destination="@id/bot_room_fragment"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/bot_room_fragment"
+        android:name="com.example.baro.feature.bot.ui.room.BotChatRoomFragment"
+        android:label="채팅방"
+        tools:layout="@layout/fragment_bot_room">
+
+        <argument
+            android:name="roomId"
+            app:argType="string" />
+
+        <argument
+            android:name="roomTitle"
+            app:argType="string" />
+    </fragment>
+
+
+
+    <!-- 파티 상세 화면 -->
+    <fragment
+        android:id="@+id/navigation_party_detail"
+        android:name="com.example.baro.feature.party.ui.detail.PartyDetailFragment"
+        android:label="파티 정보"
+        tools:layout="@layout/fragment_party_detail">
+
+        <argument
+            android:name="partyId"
+            app:argType="string"
+            app:nullable="false" />
+
+        <!-- 파티 상세 -> 채팅방 이동 (원하면 사용) -->
+        <action
+            android:id="@+id/action_navigation_party_detail_to_chatRoomFragment"
+            app:destination="@id/messageRoomFragment" />
+    </fragment>
+
+    <!-- 파티 생성 화면 -->
+    <fragment
+        android:id="@+id/partyCreateFragment"
+        android:name="com.example.baro.feature.party.ui.create.PartyCreateFragment"
+        android:label="파티 만들기"
+        tools:layout="@layout/fragment_party_create" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.baro.feature.auth.ui.settings.SettingsFragment"
+        android:label="설정"
+        tools:layout="@layout/fragment_settings">
+
+        <action
+            android:id="@+id/action_settingsFragment_to_profileEditFragment"
+            app:destination="@id/profileEditFragment" />"
+
+        <action
+            android:id="@+id/action_settingsFragment_to_settingsMyParty"
+            app:destination="@id/settingsMyParty" />"
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileEditFragment"
+        android:name="com.example.baro.feature.auth.ui.profile.ProfileEditFragment"
+        android:label="프로필 수정"
+        tools:layout="@layout/fragment_settings_profile" />
+
+    <fragment
+        android:id="@+id/settingsMyParty"
+        android:name="com.example.baro.feature.feedback.ui.myparty.MyPartyListFragment"
+        android:label="파티 목록"
+        tools:layout="@layout/fragment_settings_myparty">
+
+        <action
+            android:id="@+id/action_settingsMyParty_to_settingsRateParty"
+            app:destination="@id/settingsRateParty" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsRateParty"
+        android:name="com.example.baro.feature.feedback.ui.rating.FeedbackFragment"
+        android:label="피드백"
+        tools:layout="@layout/fragment_settings_rate_party">
+
+        <argument
+            android:name="partyId"
+            app:argType="string" />
+
+    </fragment>
+
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.baro.feature.auth.ui.login.LoginFragment"
+        android:label="로그인"
+        tools:layout="@layout/fragment_login" />
+
+    <fragment
+        android:id="@+id/signUpFragment"
+        android:name="com.example.baro.feature.auth.ui.signup.SignUpFragment"
+        android:label="회원가입"
+        tools:layout="@layout/fragment_signup" />
+
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.example.baro.feature.auth.ui.splash.SplashFragment"
+        android:label="Splash">
+        <action
+            android:id="@+id/action_splashFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+        <action
+            android:id="@+id/action_splashFragment_to_mainFragment"
+            app:destination="@id/navigation_home" />
+    </fragment>
+
+
+
+
+</navigation>
