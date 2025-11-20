@@ -7,6 +7,9 @@ from .schemas import ChatRequest, ChatResponse
 from .graph import run_agent
 from .weather import get_simple_weather
 
+# 🔽 추가
+from .modules.auth.router import router as auth_router  # NEW
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -21,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)  # NEW
 
 
 def is_weather_only_query(msg: str) -> bool:
