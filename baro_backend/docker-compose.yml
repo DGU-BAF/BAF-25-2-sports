@@ -3,7 +3,7 @@ version: "3.9"
 services:
   api:
     build: .
-    container_name: baro_backend
+    container_name: songpa-sports-chatbot
     env_file:
       - .env
     ports:

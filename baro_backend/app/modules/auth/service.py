@@ -1,205 +1,278 @@
-# app/modules/auth/service.py
+# app/auth/service.py
 from __future__ import annotations
 
-from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Optional, Any, List
+from uuid import UUID
 
-from supabase import Client
+import requests
+from jose import jwt, JWTError
 
-from app.core.supabase import get_supabase
-from app.modules.auth.schemas import (
-    AuthUser,
-    SignUpRequest,
-    ProfileUpdateRequest,
+from .schemas import AuthUser, SignUpRequestDto, ProfileUpdateRequestDto
+from ..config import SUPABASE_URL, SUPABASE_ANON_KEY
+from ..config_auth import (
+    JWT_SECRET_KEY,
+    JWT_ALGORITHM,
+    JWT_EXPIRE_DAYS,
+    KAKAO_USERINFO_URL,
+    SUPABASE_AUTH_SCHEMA,
+    SUPABASE_USERS_TABLE,
+    SUPABASE_PROFILES_TABLE,
 )
 
-PROFILES_TABLE = "profiles"
+# -------------------- 공통 Supabase 헬퍼 -------------------- #
+
+def _sb_headers() -> Dict[str, str]:
+    return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+        "Accept-Profile": SUPABASE_AUTH_SCHEMA,
+        "Content-Type": "application/json",
+    }
 
 
-def _row_to_auth_user(row: dict) -> AuthUser:
+def _sb_get(table: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    resp = requests.get(url, params=params, headers=_sb_headers(), timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f"Supabase GET 실패: {resp.status_code} - {resp.text}")
+    return resp.json()
+
+
+def _sb_post(table: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    headers = _sb_headers()
+    headers["Prefer"] = "return=representation"
+    resp = requests.post(url, json=body, headers=headers, timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f"Supabase POST 실패: {resp.status_code} - {resp.text}")
+    data = resp.json()
+    return data[0] if data else {}
+
+
+def _sb_patch(table: str, match: Dict[str, str], body: Dict[str, Any]) -> Dict[str, Any]:
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+
+    params = match.copy()
+    headers = _sb_headers()
+    headers["Prefer"] = "return=representation"
+    resp = requests.patch(url, params=params, json=body, headers=headers, timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f"Supabase PATCH 실패: {resp.status_code} - {resp.text}")
+    data = resp.json()
+    return data[0] if data else {}
+
+
+def _sb_delete(table: str, match: Dict[str, str]) -> None:
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    params = match.copy()
+    resp = requests.delete(url, params=params, headers=_sb_headers(), timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f"Supabase DELETE 실패: {resp.status_code} - {resp.text}")
+
+
+# -------------------- Kakao API -------------------- #
+
+def get_kakao_profile(access_token: str) -> dict:
     """
-    Supabase profiles row → AuthUser 변환
+    카카오 access token으로 /v2/user/me 호출해서 프로필 가져오기.
     """
-    return AuthUser(
-        id=str(row["id"]),
-        kakaoId=row.get("kakao_id"),
-        nickname=row["nickname"],
-        birthDate=row["birth_date"],          # snake_case 매칭
-        gender=row["gender"],
-        height=float(row["height"]),
-        weight=float(row["weight"]),
-        muscleMass=row.get("muscle_mass"),
-        skillLevel=row["skill_level"],
+    headers = {"Authorization": f"Bearer {access_token}"}
+    resp = requests.get(KAKAO_USERINFO_URL, headers=headers, timeout=5)
+    if not resp.ok:
+        raise ValueError(f"Kakao API error: {resp.status_code} - {resp.text}")
 
-        # jsonb로 저장된 배열
-        favoriteSports=row.get("favorite_sports", []) or [],
+    return resp.json()
 
-        sportsmanship=float(row.get("sportsmanship", 36.5)),
 
-        latitude=row.get("latitude"),
-        longitude=row.get("longitude"),
+# -------------------- JWT -------------------- #
+
+def create_jwt_token(user_id: UUID) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
+    payload = {
+        "sub": str(user_id),
+        "exp": exp,
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return token
+
+
+def verify_jwt_token(token: str) -> UUID:
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        sub = payload.get("sub")
+        if sub is None:
+            raise JWTError("No sub")
+        return UUID(sub)
+    except JWTError as e:
+        raise ValueError("Invalid token") from e
+
+
+# -------------------- Supabase users / user_profiles -------------------- #
+
+def _get_user_row_by_kakao(kakao_id: str) -> Optional[Dict[str, Any]]:
+    rows = _sb_get(
+        SUPABASE_USERS_TABLE,
+        {
+            "select": "id,kakao_id",
+            "kakao_id": f"eq.{kakao_id}",
+            "limit": 1,
+        },
+    )
+    return rows[0] if rows else None
+
+
+def _get_user_row_by_id(user_id: UUID) -> Dict[str, Any]:
+    rows = _sb_get(
+        SUPABASE_USERS_TABLE,
+        {
+            "select": "id,kakao_id",
+            "id": f"eq.{user_id}",
+            "limit": 1,
+        },
+    )
+    if not rows:
+        raise KeyError("user not found")
+    return rows[0]
+
+
+def _insert_user_row(kakao_id: str) -> Dict[str, Any]:
+    return _sb_post(
+        SUPABASE_USERS_TABLE,
+        {
+            "kakao_id": kakao_id,
+        },
     )
 
 
-class AuthService:
+def _get_profile_row(user_id: UUID) -> Optional[Dict[str, Any]]:
+    rows = _sb_get(
+        SUPABASE_PROFILES_TABLE,
+        {
+            "select": "*",
+            "user_id": f"eq.{user_id}",
+            "limit": 1,
+        },
+    )
+    return rows[0] if rows else None
+
+
+def _upsert_profile_row(user_id: UUID, body: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Supabase profiles 테이블 접근
+    user_profiles 에 row가 있으면 PATCH, 없으면 INSERT.
     """
+    existing = _get_profile_row(user_id)
+    body_with_id = body.copy()
+    body_with_id["user_id"] = str(user_id)
 
-    def __init__(self, client: Optional[Client] = None) -> None:
-        self._client: Client = client or get_supabase()
-
-    # ---------------------------------------------------------
-    # 내부 헬퍼
-    # ---------------------------------------------------------
-    def _get_profile_row(self, user_id: str) -> Optional[dict]:
-        res = (
-            self._client
-            .table(PROFILES_TABLE)
-            .select("*")
-            .eq("id", user_id)
-            .single()
-            .execute()
+    if existing:
+        return _sb_patch(
+            SUPABASE_PROFILES_TABLE,
+            {"user_id": f"eq.{user_id}"},
+            body_with_id,
         )
-        return getattr(res, "data", None)
+    else:
+        return _sb_post(SUPABASE_PROFILES_TABLE, body_with_id)
 
-    # ---------------------------------------------------------
-    # 외부 API
-    # ---------------------------------------------------------
-    def get_profile(self, user_id: str) -> Optional[AuthUser]:
-        row = self._get_profile_row(user_id)
-        if not row:
-            return None
-        return _row_to_auth_user(row)
 
-    # ---------------------------------------------------------
-    # 회원가입
-    # ---------------------------------------------------------
-    def create_profile(
-        self,
-        user_id: str,
-        kakao_id: Optional[str],
-        signup: SignUpRequest,
-    ) -> AuthUser:
+def _row_to_auth_user(
+    user_row: Dict[str, Any],
+    profile_row: Optional[Dict[str, Any]],
+    kakao_nickname: Optional[str] = None,
+    kakao_image_url: Optional[str] = None,
+) -> AuthUser:
+    """
+    Supabase users + user_profiles → AuthUser 로 매핑.
+    profile_row 가 없을 수도 있음.
+    """
+    profile_row = profile_row or {}
 
-        payload = {
-            "id": user_id,
-            "kakao_id": kakao_id,
+    # preferred_sports 가 text[] 인 경우와 text (콤마 구분) 인 경우 모두 고려
+    pref = profile_row.get("preferred_sports")
+    if isinstance(pref, str):
+        preferred_sports = [s.strip() for s in pref.split(",") if s.strip()]
+    else:
+        preferred_sports = pref
 
-            "nickname": signup.nickname,
-            "birth_date": signup.birthDate,
-            "gender": signup.gender,
+    return AuthUser(
+        id=UUID(user_row["id"]),
+        kakao_id=user_row["kakao_id"],
+        nickname=profile_row.get("nickname") or kakao_nickname,
+        profile_image_url=kakao_image_url,
+        age=profile_row.get("age"),
+        gender=profile_row.get("gender"),
+        height_cm=profile_row.get("height_cm"),
+        weight_kg=profile_row.get("weight_kg"),
+        level=profile_row.get("level"),
+        preferred_sports=preferred_sports,
+        latitude=profile_row.get("latitude"),
+        longitude=profile_row.get("longitude"),
+        sportsmanship=profile_row.get("sportsmanship"),
+    )
 
-            "height": signup.height,
-            "weight": signup.weight,
-            "muscle_mass": signup.muscleMass,
 
-            "skill_level": signup.skillLevel,
+# -------------------- 외부에서 쓰는 서비스 함수들 -------------------- #
 
-            # jsonb 배열 그대로 저장
-            "favorite_sports": signup.favoriteSports,
+def login_with_kakao(access_token: str) -> AuthUser:
+    """
+    1) 카카오에서 프로필 조회
+    2) kakao_id 기준으로 Supabase users 에서 유저 생성/조회
+    3) user_profiles 와 합쳐서 AuthUser 리턴
+    """
+    data = get_kakao_profile(access_token)
 
-            # 기본 매너온도
-            "sportsmanship": 36.5,
+    kakao_id = str(data["id"])
+    profile = data.get("kakao_account", {}).get("profile", {})
 
-            # created_at        → Supabase default now()
-            # location_updated_at → 초기에는 None
-        }
+    nickname = profile.get("nickname")
+    image_url = profile.get("profile_image_url") or profile.get("thumbnail_image_url")
 
-        res = (
-            self._client
-            .table(PROFILES_TABLE)
-            .insert(payload)
-            .select("*")
-            .single()
-            .execute()
-        )
+    # 1) users 테이블에서 kakao_id 로 검색
+    user_row = _get_user_row_by_kakao(kakao_id)
+    if not user_row:
+        # 신규 가입 → users 에 row 만들기
+        user_row = _insert_user_row(kakao_id)
 
-        return _row_to_auth_user(res.data)
+    # 2) user_profiles 조회
+    user_id = UUID(user_row["id"])
+    profile_row = _get_profile_row(user_id)
 
-    # ---------------------------------------------------------
-    # 프로필 수정
-    # ---------------------------------------------------------
-    def update_profile(
-        self,
-        user_id: str,
-        update: ProfileUpdateRequest,
-    ) -> AuthUser:
+    # 3) AuthUser 로 매핑 (profile 없는 경우도 허용)
+    return _row_to_auth_user(user_row, profile_row, nickname, image_url)
 
-        update_dict = {}
 
-        if update.nickname is not None:
-            update_dict["nickname"] = update.nickname
-        if update.height is not None:
-            update_dict["height"] = update.height
-        if update.weight is not None:
-            update_dict["weight"] = update.weight
-        if update.muscleMass is not None:
-            update_dict["muscle_mass"] = update.muscleMass
-        if update.skillLevel is not None:
-            update_dict["skill_level"] = update.skillLevel
-        if update.favoriteSports is not None:
-            update_dict["favorite_sports"] = update.favoriteSports
+def sign_up(user_id: UUID, req: SignUpRequestDto) -> AuthUser:
+    """
+    최초 회원가입(추가 정보 입력) → user_profiles upsert.
+    """
+    body = req.dict(exclude_none=True)
+    profile_row = _upsert_profile_row(user_id, body)
+    user_row = _get_user_row_by_id(user_id)
+    return _row_to_auth_user(user_row, profile_row)
 
-        # -----------------------------------------------------
-        # 위치 변경 + location_updated_at 갱신
-        # -----------------------------------------------------
-        location_changed = False
 
-        if update.latitude is not None:
-            update_dict["latitude"] = update.latitude
-            location_changed = True
+def update_profile(user_id: UUID, req: ProfileUpdateRequestDto) -> AuthUser:
+    """
+    프로필 수정 → user_profiles upsert.
+    """
+    body = req.dict(exclude_unset=True, exclude_none=True)
+    if not body:
+        # 수정할 내용이 없으면 그대로 반환
+        profile_row = _get_profile_row(user_id)
+    else:
+        profile_row = _upsert_profile_row(user_id, body)
 
-        if update.longitude is not None:
-            update_dict["longitude"] = update.longitude
-            location_changed = True
+    user_row = _get_user_row_by_id(user_id)
+    return _row_to_auth_user(user_row, profile_row)
 
-        if location_changed:
-            update_dict["location_updated_at"] = datetime.utcnow().isoformat()
 
-        # -----------------------------------------------------
-        # 업데이트할 값이 없다면 그대로 반환
-        # -----------------------------------------------------
-        if not update_dict:
-            row = self._get_profile_row(user_id)
-            if not row:
-                raise ValueError(f"Profile not found for user_id={user_id}")
-            return _row_to_auth_user(row)
+def get_user(user_id: UUID) -> AuthUser:
+    user_row = _get_user_row_by_id(user_id)
+    profile_row = _get_profile_row(user_id)
+    return _row_to_auth_user(user_row, profile_row)
 
-        # -----------------------------------------------------
-        # DB 업데이트
-        # -----------------------------------------------------
-        res = (
-            self._client
-            .table(PROFILES_TABLE)
-            .update(update_dict)
-            .eq("id", user_id)
-            .select("*")
-            .single()
-            .execute()
-        )
 
-        return _row_to_auth_user(res.data)
-
-    # ---------------------------------------------------------
-    # ensure_profile: signup 없으면 None
-    # ---------------------------------------------------------
-    def ensure_profile(
-        self,
-        user_id: str,
-        kakao_id: Optional[str],
-        signup: Optional[SignUpRequest] = None,
-    ) -> Optional[AuthUser]:
-
-        existing = self.get_profile(user_id)
-        if existing:
-            return existing
-
-        if signup is None:
-            return None
-
-        return self.create_profile(
-            user_id=user_id,
-            kakao_id=kakao_id,
-            signup=signup,
-        )
+def delete_user(user_id: UUID) -> None:
+    # profile 먼저 삭제 후 user 삭제
+    _sb_delete(SUPABASE_PROFILES_TABLE, {"user_id": f"eq.{user_id}"})
+    _sb_delete(SUPABASE_USERS_TABLE, {"id": f"eq.{user_id}"})

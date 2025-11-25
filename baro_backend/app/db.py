@@ -143,12 +143,12 @@ def get_profiled_facilities(
         age_gender_pref_sports = _fetch_age_gender_pref_sports(age_band, gender)
 
     # 가중치 (1~6순위)
-    W_DIST = 0.5
+    W_DIST = 0.2
     W_PREF = 0.2
-    W_AGE = 0.08
-    W_GENDER = 0.05
-    W_INTENSITY = 0.03
-    W_AGE_SPORTS = 0.02
+    W_AGE = 0.2
+    W_GENDER = 0.2
+    W_INTENSITY = 0.05
+    W_AGE_SPORTS = 0.05
 
     preferred_sports_norm = [
         _norm(s) for s in (preferred_sports or [])
@@ -244,3 +244,72 @@ def get_profiled_facilities(
         "indoor_only": indoor_only,
         "facilities": results[:limit],
     }
+
+# ✅ sample 스키마(파티 테이블용) 헤더
+def _sample_headers() -> Dict[str, str]:
+    return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+        "Accept-Profile": "sample",      # Supabase 좌측 상단 schema 이름
+    }
+
+# ------------------ 파티 정보 조회 ------------------ #
+def get_nearby_parties(
+    user_lat: float,
+    user_lon: float,
+    max_distance_km: float = 5.0,
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """
+    Supabase sample.parties 테이블에서
+    사용자 근처에서 모집 중인 파티를 거리순으로 반환.
+    """
+
+    url = f"{SUPABASE_URL}/rest/v1/parties"
+    params = {
+        # 필요 컬럼만 골라서 가져오기
+        "select": "id,title,sports_nm,place,lat,lon,date,start_time,end_time,max_members,notes,status",
+        "status": "eq.recruiting",  # 모집 중인 파티만
+    }
+
+    resp = requests.get(url, params=params, headers=_sample_headers(), timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f"Supabase parties 요청 실패: {resp.status_code} - {resp.text}")
+
+    rows = resp.json()
+
+    results: List[Dict[str, Any]] = []
+    for row in rows:
+        try:
+            party_lat = float(row["lat"])
+            party_lon = float(row["lon"])
+        except (TypeError, ValueError):
+            continue
+
+        distance_km = _haversine(user_lat, user_lon, party_lat, party_lon)
+
+        # 너무 먼 파티는 제외 (예: 5km 이상)
+        if distance_km > max_distance_km:
+            continue
+
+        results.append(
+            {
+                "id": row["id"],
+                "title": row.get("title"),
+                "sports_nm": row.get("sports_nm"),
+                "place": row.get("place"),
+                "lat": party_lat,
+                "lon": party_lon,
+                "date": row.get("date"),
+                "start_time": row.get("start_time"),
+                "end_time": row.get("end_time"),
+                "max_members": row.get("max_members"),
+                "notes": row.get("notes"),
+                "status": row.get("status"),
+                "distance_km": round(distance_km, 2),
+            }
+        )
+
+    # 거리 가까운 순서로 정렬
+    results.sort(key=lambda x: x["distance_km"])
+    return results[:limit]

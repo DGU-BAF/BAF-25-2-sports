@@ -7,11 +7,6 @@ from .schemas import ChatRequest, ChatResponse
 from .graph import run_agent
 from .weather import get_simple_weather
 
-# 🔽 추가
-from .modules.auth.router import router as auth_router  # NEW
-from app.modules.bot.router import router as bot_router
-from app.modules.party.router import router as party_router
-
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -26,10 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(auth_router)  # NEW
-app.include_router(bot_router)
-app.include_router(party_router)
 
 
 def is_weather_only_query(msg: str) -> bool:
@@ -85,6 +76,23 @@ def chatbot_message(req: ChatRequest) -> ChatResponse:
             "이 위치를 기준으로 운동 시설을 추천해줘.\n"
         )
         user_text = location_str + user_text
+
+    # 체중 관리 정보를 함께 전달하면 에이전트가 정확한 수치를 활용해 답변할 수 있다.
+    metrics: list[str] = []
+    if req.height_cm is not None:
+        metrics.append(f"키: {req.height_cm}cm")
+    if req.weight_kg is not None:
+        metrics.append(f"체중: {req.weight_kg}kg")
+    if req.goal_weight_kg is not None:
+        metrics.append(f"목표 체중: {req.goal_weight_kg}kg")
+    if req.weekly_goal_kg is not None:
+        metrics.append(f"주당 증감 목표: {req.weekly_goal_kg}kg")
+
+    if metrics:
+        metrics_str = (
+            "[체중 관리 프로필]\n" + ", ".join(metrics) + "\n" + "이 정보를 활용해 식단/운동/체중 관리 조언을 해줘.\n"
+        )
+        user_text = metrics_str + user_text
 
     try:
         answer = run_agent(user_text)

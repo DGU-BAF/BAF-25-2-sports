@@ -6,9 +6,12 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-SUPABASE_KEY = SUPABASE_ANON_KEY
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 KMA_API_KEY = os.getenv("KMA_API_KEY")
+SUPABASE_AUTH_SCHEMA = "sample"
+SUPABASE_USERS_TABLE = "users"
+SUPABASE_PROFILES_TABLE = "user_profiles"
+
 
 if not SUPABASE_URL or not SUPABASE_ANON_KEY:
     raise RuntimeError("Supabase 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)를 설정하세요.")
