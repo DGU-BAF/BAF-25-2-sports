@@ -3,7 +3,38 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/navigation_home">
+    app:startDestination="@id/splashFragment">
+
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.example.baro.feature.auth.ui.splash.SplashFragment"
+        android:label="Splash">
+        <action
+            android:id="@+id/action_splashFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+        <action
+            android:id="@+id/action_splashFragment_to_mainFragment"
+            app:destination="@id/navigation_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.baro.feature.auth.ui.login.LoginFragment"
+        android:label="로그인"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_loginFragment_to_homeFragment"
+            app:destination="@id/navigation_home" />"
+        <action
+            android:id="@+id/action_loginFragment_to_signUpFragment"
+            app:destination="@id/signUpFragment" />"
+    </fragment>
+
+    <fragment
+        android:id="@+id/signUpFragment"
+        android:name="com.example.baro.feature.auth.ui.signup.SignUpFragment"
+        android:label="회원가입"
+        tools:layout="@layout/fragment_signup" />
 
     <!-- 홈 탭 -->
     <fragment
@@ -156,33 +187,6 @@
             app:argType="string" />
 
     </fragment>
-
-
-    <fragment
-        android:id="@+id/loginFragment"
-        android:name="com.example.baro.feature.auth.ui.login.LoginFragment"
-        android:label="로그인"
-        tools:layout="@layout/fragment_login" />
-
-    <fragment
-        android:id="@+id/signUpFragment"
-        android:name="com.example.baro.feature.auth.ui.signup.SignUpFragment"
-        android:label="회원가입"
-        tools:layout="@layout/fragment_signup" />
-
-    <fragment
-        android:id="@+id/splashFragment"
-        android:name="com.example.baro.feature.auth.ui.splash.SplashFragment"
-        android:label="Splash">
-        <action
-            android:id="@+id/action_splashFragment_to_loginFragment"
-            app:destination="@id/loginFragment" />
-        <action
-            android:id="@+id/action_splashFragment_to_mainFragment"
-            app:destination="@id/navigation_home" />
-    </fragment>
-
-
 
 
 </navigation>

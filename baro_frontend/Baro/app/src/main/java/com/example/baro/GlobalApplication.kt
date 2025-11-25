@@ -50,7 +50,7 @@ class GlobalApplication : Application() {
         val contentType = "application/json".toMediaType()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://192.168.45.157:8000/") // FastAPI 서버 주소
+            .baseUrl("http://192.168.45.86:8000/") // FastAPI 서버 주소
             .addConverterFactory(Json.asConverterFactory(contentType))
             .build()
 

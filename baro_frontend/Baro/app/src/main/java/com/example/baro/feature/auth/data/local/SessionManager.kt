@@ -24,6 +24,13 @@ class SessionManager(
         }
     }
 
+    // 1) access token만 지우는 함수 (Splash에서 필요)
+    suspend fun clearAccessToken() {
+        dataStore.edit { prefs ->
+            prefs.remove(KEY_ACCESS_TOKEN)
+        }
+    }
+
     suspend fun clear() {
         dataStore.edit { prefs ->
             prefs.remove(KEY_ACCESS_TOKEN)

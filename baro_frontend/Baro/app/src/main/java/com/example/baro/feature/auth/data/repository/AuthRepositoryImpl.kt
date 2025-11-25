@@ -8,18 +8,34 @@ import com.example.baro.feature.auth.domain.model.AuthUser
 import com.example.baro.feature.auth.domain.model.ProfileUpdateRequest
 import com.example.baro.feature.auth.domain.model.SignUpRequest
 import com.example.baro.feature.auth.domain.repository.AuthRepository
+import com.example.baro.feature.auth.domain.repository.LoginResult
 
 class AuthRepositoryImpl(
     private val authApi: AuthApi,
     private val authLocalDataSource: AuthLocalDataSource
 ) : AuthRepository {
 
-    override suspend fun loginWithKakao(kakaoAccessToken: String): AuthUser {
-        val response = authApi.loginWithKakao(LoginRequestDto(kakaoAccessToken))
-        // JWT 저장
-        authLocalDataSource.saveAccessToken(response.accessToken)
-        // 유저 정보 도메인으로 변환
-        return AuthMapper.toDomain(response.user)
+    override suspend fun loginWithKakao(token: String): LoginResult {
+        val response = authApi.loginWithKakao(LoginRequestDto(token))
+
+        return if (response.isNewUser) {
+            // 신규 회원 → 토큰 저장 안 함
+            LoginResult(
+                isNewUser = true,
+                user = null
+            )
+        } else {
+            // 기존 회원 → 토큰 저장 + 유저 정보 매핑
+            // authLocalDataSource 인스턴스를 사용해야 함
+            authLocalDataSource.saveAccessToken(response.accessToken!!)
+
+            val user: AuthUser = AuthMapper.toDomain(response.user!!)
+
+            LoginResult(
+                isNewUser = false,
+                user = user
+            )
+        }
     }
 
     override suspend fun signUp(request: SignUpRequest): AuthUser {
@@ -40,16 +56,12 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout() {
-        // 서버에 로그아웃 API가 있으면 호출
         runCatching { authApi.logout() }
-        // 로컬 세션 제거
         authLocalDataSource.clearSession()
     }
 
     override suspend fun withdraw() {
-        // 서버 계정 삭제
         authApi.withdraw()
-        // 로컬 세션 제거
         authLocalDataSource.clearSession()
     }
 }

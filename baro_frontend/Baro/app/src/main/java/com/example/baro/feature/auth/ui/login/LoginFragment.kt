@@ -14,6 +14,7 @@ import com.example.baro.feature.auth.data.local.AuthLocalDataSource
 import com.example.baro.feature.auth.data.local.SessionManager
 import com.example.baro.feature.auth.data.remote.AuthApi
 import com.example.baro.feature.auth.data.repository.AuthRepositoryImpl
+import com.kakao.sdk.user.UserApiClient
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -48,16 +49,20 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
         // 카카오 로그인 버튼 클릭
         binding.btnKakaoLogin.setOnClickListener {
-            // TODO: 실제 카카오 SDK 호출 후, accessToken 얻어서 아래 함수에 넣어주면 됨
-            // 예시: viewModel.loginWithKakaoToken(kakaoAccessToken)
-        }
+            val context = requireContext()
 
-//        // 로딩 상태
-//        viewLifecycleOwner.lifecycleScope.launch {
-//            viewModel.isLoading.collectLatest { loading ->
-//                binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-//            }
-//        }
+            // 1) 카카오톡 로그인 가능하면 먼저 시도
+            if (UserApiClient.instance.isKakaoTalkLoginAvailable(context)) {
+                UserApiClient.instance.loginWithKakaoTalk(context) { token, error ->
+                    handleKakaoLoginResult(token, error)
+                }
+            } else {
+                // 2) 카카오톡이 없으면 바로 계정 로그인(웹뷰/브라우저 방식)
+                UserApiClient.instance.loginWithKakaoAccount(context) { token, error ->
+                    handleKakaoLoginResult(token, error)
+                }
+            }
+        }
 
         // 에러 메시지
         viewLifecycleOwner.lifecycleScope.launch {
@@ -70,20 +75,52 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             }
         }
 
-        // 로그인 성공 시 홈/온보딩 등으로 이동
+        // 1. 로그인 성공(기존 회원) → 메인 화면으로 이동
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.loginSuccessEvent.collectLatest { success ->
                 if (success) {
-                    // TODO: 실제 목적지로 수정 (예: 홈 화면)
-                    // findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+                    findNavController().navigate(
+                        R.id.action_loginFragment_to_homeFragment   // ← 본인 그래프에 맞게 수정
+                    )
                     viewModel.consumeLoginSuccessEvent()
                 }
             }
         }
+
+// 2. 신규 회원 → 회원가입 화면으로 이동
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.navigateToSignupEvent.collectLatest { go ->
+                if (go) {
+                    findNavController().navigate(
+                        R.id.action_loginFragment_to_signUpFragment  // ← 본인 그래프에 맞게 수정
+                    )
+                    viewModel.consumeNavigateToSignupEvent()
+                }
+            }
+        }
+
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
+
+    private fun handleKakaoLoginResult(
+        token: com.kakao.sdk.auth.model.OAuthToken?,
+        error: Throwable?
+    ) {
+        if (error != null) {
+            android.util.Log.d("Login", "카카오 로그인 실패: $error")
+            // TODO: Toast나 Snackbar로 에러 안내
+            return
+        }
+
+        if (token != null) {
+            android.util.Log.d("Login", "카카오 로그인 성공, accessToken=${token.accessToken}")
+            val kakaoAccessToken = token.accessToken
+            viewModel.loginWithKakaoToken(kakaoAccessToken)
+        }
+    }
+
 }

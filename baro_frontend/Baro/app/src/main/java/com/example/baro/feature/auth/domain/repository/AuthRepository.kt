@@ -14,7 +14,7 @@ interface AuthRepository {
      * 카카오 액세스 토큰을 이용한 로그인
      * - 백엔드에 토큰 전달 → JWT + 유저 정보(AuthUser) 반환
      */
-    suspend fun loginWithKakao(kakaoAccessToken: String): AuthUser
+    suspend fun loginWithKakao(kakaoAccessToken: String): LoginResult
 
     /**
      * 최초 회원가입 / 추가 정보 저장

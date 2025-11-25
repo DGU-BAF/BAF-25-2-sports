@@ -21,9 +21,14 @@ class LoginViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    // 로그인 성공 시, 다음 화면으로 넘어가야 한다는 신호
+    // 기존 회원 → 메인으로 보내는 이벤트
     private val _loginSuccessEvent = MutableStateFlow(false)
     val loginSuccessEvent: StateFlow<Boolean> = _loginSuccessEvent
+
+    // 신규 회원 → 회원가입 화면으로 보내는 이벤트
+    private val _navigateToSignupEvent = MutableStateFlow(false)
+    val navigateToSignupEvent: StateFlow<Boolean> = _navigateToSignupEvent
+
 
     fun loginWithKakaoToken(kakaoAccessToken: String) {
         if (kakaoAccessToken.isBlank()) {
@@ -37,9 +42,16 @@ class LoginViewModel(
 
             runCatching {
                 authRepository.loginWithKakao(kakaoAccessToken)
-            }.onSuccess { authUser ->
-                _user.value = authUser
-                _loginSuccessEvent.value = true
+            }.onSuccess { result ->
+                _user.value = result.user
+
+                if (result.isNewUser) {
+                    // 신규 회원 → 회원가입 화면으로
+                    _navigateToSignupEvent.value = true
+                } else {
+                    // 기존 회원 → 메인으로
+                    _loginSuccessEvent.value = true
+                }
             }.onFailure { e ->
                 _errorMessage.value = e.message ?: "로그인 중 오류가 발생했습니다."
             }
@@ -50,6 +62,10 @@ class LoginViewModel(
 
     fun consumeLoginSuccessEvent() {
         _loginSuccessEvent.value = false
+    }
+
+    fun consumeNavigateToSignupEvent() {
+        _navigateToSignupEvent.value = false
     }
 
     fun clearError() {
