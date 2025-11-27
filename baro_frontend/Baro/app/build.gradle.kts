@@ -112,4 +112,7 @@ dependencies {
     implementation("androidx.datastore:datastore-core:1.1.1")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    // 위치
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }
