@@ -17,7 +17,6 @@ class AuthUser(BaseModel):
     id: UUID
     kakao_id: str
     nickname: Optional[str] = None
-    profile_image_url: Optional[str] = None
     role: str = "user"  # 기본값 user
     
     # 추가 프로필 정보

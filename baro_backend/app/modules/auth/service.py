@@ -182,7 +182,6 @@ def _row_to_auth_user(
     user_row: Dict[str, Any],
     profile_row: Optional[Dict[str, Any]],
     kakao_nickname: Optional[str] = None,
-    kakao_image_url: Optional[str] = None,
 ) -> AuthUser:
     """
     Supabase users + user_profiles → AuthUser 로 매핑.
@@ -201,7 +200,6 @@ def _row_to_auth_user(
         id=UUID(user_row["id"]),
         kakao_id=user_row["kakao_id"],
         nickname=profile_row.get("nickname") or kakao_nickname,
-        profile_image_url=kakao_image_url,
         age=profile_row.get("age"),
         gender=profile_row.get("gender"),
         height_cm=profile_row.get("height_cm"),
@@ -228,7 +226,6 @@ def login_with_kakao(access_token: str) -> AuthUser:
     profile = data.get("kakao_account", {}).get("profile", {})
 
     nickname = profile.get("nickname")
-    image_url = profile.get("profile_image_url") or profile.get("thumbnail_image_url")
 
     # 1) users 테이블에서 kakao_id 로 검색
     user_row = _get_user_row_by_kakao(kakao_id)
@@ -241,7 +238,7 @@ def login_with_kakao(access_token: str) -> AuthUser:
     profile_row = _get_profile_row(user_id)
 
     # 3) AuthUser 로 매핑 (profile 없는 경우도 허용)
-    return _row_to_auth_user(user_row, profile_row, nickname, image_url)
+    return _row_to_auth_user(user_row, profile_row, nickname)
 
 
 def sign_up(user_id: UUID, req: SignUpRequestDto) -> AuthUser:
