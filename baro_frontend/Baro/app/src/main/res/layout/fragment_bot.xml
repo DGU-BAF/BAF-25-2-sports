@@ -28,7 +28,7 @@
             android:background="@drawable/bg_party_join"
             android:paddingHorizontal="10dp"
             android:paddingVertical="5dp"
-            android:text="위치 설정"
+            android:text="현재 위치 설정"
             android:textAlignment="center"
             android:textColor="@color/black"
             android:textSize="17sp"
