@@ -9,14 +9,14 @@ data class AuthUser(
     val kakaoId: String,            // 카카오 계정 식별자 (읽기 전용)
 
     val nickname: String,
-    val birthDate: String,          // "YYYY-MM-DD"
-    val gender: String,             // "male" / "female" / 기타 정의
+    val birthDate: String?,          // "YYYY-MM-DD"
+    val gender: String?,             // "male" / "female" / 기타 정의
 
     val height: Float,              // cm
     val weight: Float,              // kg
     val muscleMass: Float?,         // 골격근량 (선택)
 
-    val skillLevel: String,         // "beginner" / "intermediate" / "advanced" 등
+    val skillLevel: String?,         // "beginner" / "intermediate" / "advanced" 등
     val favoriteSports: List<String>,
 
     val sportsmanship: Float,       // 매너온도 (서버 계산값, 클라이언트 수정 X)

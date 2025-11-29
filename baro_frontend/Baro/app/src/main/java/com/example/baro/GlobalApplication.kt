@@ -9,10 +9,11 @@ import com.example.baro.feature.party.PartyServiceLocator
 import com.kakao.sdk.common.KakaoSdk
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
-import retrofit2.Retrofit
 //import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 // 이 import 문을 GlobalApplication.kt 파일 상단에 추가하세요.
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -50,8 +51,8 @@ class GlobalApplication : Application() {
         val contentType = "application/json".toMediaType()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://192.168.45.86:8000/") // FastAPI 서버 주소
-            .addConverterFactory(Json.asConverterFactory(contentType))
+            .baseUrl("http://192.168.45.157:8000/") // FastAPI 서버 주소
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
 
         // ---------------------------

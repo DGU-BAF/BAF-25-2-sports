@@ -1,5 +1,6 @@
 package com.example.baro.feature.auth.data.repository
 
+import android.util.Log
 import com.example.baro.feature.auth.data.local.AuthLocalDataSource
 import com.example.baro.feature.auth.data.mapper.AuthMapper
 import com.example.baro.feature.auth.data.remote.AuthApi
@@ -16,26 +17,43 @@ class AuthRepositoryImpl(
 ) : AuthRepository {
 
     override suspend fun loginWithKakao(token: String): LoginResult {
-        val response = authApi.loginWithKakao(LoginRequestDto(token))
+        // 프론트 → 서버로 보내는 바디
+        val request = LoginRequestDto(
+            kakaoAccessToken = token
+        )
 
-        return if (response.isNewUser) {
-            // 신규 회원 → 토큰 저장 안 함
-            LoginResult(
-                isNewUser = true,
-                user = null
-            )
+        Log.d("AuthRepository", "loginWithKakao() request = $request")
+
+        // 서버 호출
+        val response = authApi.loginWithKakao(request)
+
+        Log.d(
+            "AuthRepository",
+            "loginWithKakao() response: isNewUser=${response.isNewUser}, " +
+                    "accessToken=${response.accessToken}, user=${response.user}"
+        )
+
+        // accessToken 저장
+        val backendToken = response.accessToken
+        if (!backendToken.isNullOrBlank()) {
+            Log.d("AuthRepository", "Saving backend accessToken to DataStore")
+            authLocalDataSource.saveAccessToken(backendToken)
         } else {
-            // 기존 회원 → 토큰 저장 + 유저 정보 매핑
-            // authLocalDataSource 인스턴스를 사용해야 함
-            authLocalDataSource.saveAccessToken(response.accessToken!!)
-
-            val user: AuthUser = AuthMapper.toDomain(response.user!!)
-
-            LoginResult(
-                isNewUser = false,
-                user = user
+            Log.w(
+                "AuthRepository",
+                "backend accessToken is null or blank (isNewUser=${response.isNewUser})"
             )
         }
+
+        // 유저 매핑
+        val user: AuthUser? = response.user?.let { dto ->
+            AuthMapper.toDomain(dto)
+        }
+
+        return LoginResult(
+            isNewUser = response.isNewUser,
+            user = user
+        )
     }
 
     override suspend fun signUp(request: SignUpRequest): AuthUser {

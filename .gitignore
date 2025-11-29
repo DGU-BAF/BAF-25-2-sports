@@ -1,1 +1,4 @@
+.venv/
+.vscode/
 baro_backend/.env
+.DS_Store

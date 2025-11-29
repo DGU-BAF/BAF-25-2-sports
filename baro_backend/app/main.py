@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # 모듈별 라우터 임포트
-from app.modules.auth.router import router as auth_router
+from app.modules.auth.router import auth_router, users_router 
 from app.modules.bot.router import router as bot_router
 # 추후 추가될 라우터들
 # from app.modules.party.router import router as party_router
@@ -24,6 +24,7 @@ app.add_middleware(
 
 # 라우터 등록 (이곳에 모두 등록해야 Swagger에 표시됩니다)
 app.include_router(auth_router)
+app.include_router(users_router)
 app.include_router(bot_router)
 # app.include_router(party_router)
 

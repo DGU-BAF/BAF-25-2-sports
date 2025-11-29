@@ -1,5 +1,6 @@
 package com.example.baro.feature.auth.ui.login
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.baro.feature.auth.domain.model.AuthUser
@@ -21,11 +22,9 @@ class LoginViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    // 기존 회원 → 메인으로 보내는 이벤트
     private val _loginSuccessEvent = MutableStateFlow(false)
     val loginSuccessEvent: StateFlow<Boolean> = _loginSuccessEvent
 
-    // 신규 회원 → 회원가입 화면으로 보내는 이벤트
     private val _navigateToSignupEvent = MutableStateFlow(false)
     val navigateToSignupEvent: StateFlow<Boolean> = _navigateToSignupEvent
 
@@ -36,23 +35,30 @@ class LoginViewModel(
             return
         }
 
+        Log.d("LoginVM", "loginWithKakaoToken() called, token=$kakaoAccessToken")
+
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
 
             runCatching {
+                Log.d("LoginVM", "calling authRepository.loginWithKakao()")
                 authRepository.loginWithKakao(kakaoAccessToken)
             }.onSuccess { result ->
+                Log.d(
+                    "LoginVM",
+                    "loginWithKakaoToken success, isNewUser=${result.isNewUser}, user=${result.user}"
+                )
+
                 _user.value = result.user
 
                 if (result.isNewUser) {
-                    // 신규 회원 → 회원가입 화면으로
                     _navigateToSignupEvent.value = true
                 } else {
-                    // 기존 회원 → 메인으로
                     _loginSuccessEvent.value = true
                 }
             }.onFailure { e ->
+                Log.e("LoginVM", "loginWithKakaoToken failed", e)
                 _errorMessage.value = e.message ?: "로그인 중 오류가 발생했습니다."
             }
 

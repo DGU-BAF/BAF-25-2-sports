@@ -77,6 +77,7 @@ dependencies {
     // libs.versions.toml 예시:
     // retrofit-converter-kotlinx = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version = "0.8.0" }
     implementation(libs.retrofit.converter.kotlinx)
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     // ✅ Kotlinx Serialization JSON
     // libs.versions.toml 예시:

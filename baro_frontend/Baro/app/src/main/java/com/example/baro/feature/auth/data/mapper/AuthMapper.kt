@@ -13,15 +13,29 @@ object AuthMapper {
         AuthUser(
             id = userDto.id,
             kakaoId = userDto.kakaoId,
-            nickname = userDto.nickname,
+
+            // String? -> String (기본값 "")
+            nickname = userDto.nickname.orEmpty(),
+
+            // nullable 그대로 들고 가도 됨
             birthDate = userDto.birthDate,
             gender = userDto.gender,
-            height = userDto.height,
-            weight = userDto.weight,
-            muscleMass = userDto.muscleMass,
+
+            // Float? -> Float (기본값 0f 로 맞춰야 type mismatch 안 남)
+            height = userDto.height ?: 0f,
+            weight = userDto.weight ?: 0f,
+            muscleMass = userDto.muscleMass,       // 그대로 nullable
+
+            // String? -> String? (그대로 두거나 orEmpty() 로 바꾸고 싶으면 도메인도 String으로)
             skillLevel = userDto.skillLevel,
-            favoriteSports = userDto.favoriteSports,
-            sportsmanship = userDto.sportsmanship,
+
+            // List<String>? -> List<String>
+            favoriteSports = userDto.favoriteSports ?: emptyList(),
+
+            // Float? -> Float
+            sportsmanship = userDto.sportsmanship ?: 0f,
+
+            // Double? 는 그대로
             latitude = userDto.latitude,
             longitude = userDto.longitude
         )

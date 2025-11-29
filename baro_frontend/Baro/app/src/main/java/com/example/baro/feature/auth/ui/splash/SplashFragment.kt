@@ -33,6 +33,8 @@ class SplashFragment : Fragment(R.layout.fragment_splash) {
         val dataStore = app.dataStore
         val sessionManager = SessionManager(dataStore)
 
+
+
         // 1) 먼저 카카오 토큰이 유효한지 확인
         //    (카카오톡 설정에서 이 앱 회원탈퇴 했으면 여기서 에러/ null 떨어짐)
         val kakaoTokenValid = suspendCancellableKakaoCheck()
@@ -63,7 +65,7 @@ class SplashFragment : Fragment(R.layout.fragment_splash) {
             Log.d("Splash", "Has backend token → go Main")
             // 카카오 + 우리 서버 둘 다 로그인 상태 → 메인으로
             findNavController().navigate(
-                R.id.action_splashFragment_to_mainFragment
+                R.id.action_splashFragment_to_homeFragment
             )
         }
     }

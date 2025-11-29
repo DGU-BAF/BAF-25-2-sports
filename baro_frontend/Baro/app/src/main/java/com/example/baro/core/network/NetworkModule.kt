@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 object NetworkModule {
 
-    // 실기기에서 확인한 FastAPI 주소 (여기만 수정)
+    // 실기기에서 확인한 FastAPI 주소
     const val BASE_URL: String = "http://192.168.45.157:8000/"
 
     // --- JSON 설정 (kotlinx) ---
@@ -106,6 +106,7 @@ object NetworkModule {
 
     /**
      * JWT 자동 붙이는 Retrofit (auth 용)
+     * 👉 여기서 이제 Gson 사용하도록 변경
      */
     fun createAuthorizedRetrofit(
         sessionManager: SessionManager
@@ -116,7 +117,7 @@ object NetworkModule {
         return createRetrofit(
             baseUrl = BASE_URL,
             okHttpClient = clientWithAuth,
-            useKotlinx = true
+            useKotlinx = false   // 🔴 여기 true → false 로 변경
         )
     }
 

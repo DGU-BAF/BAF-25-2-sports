@@ -68,8 +68,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.errorMessage.collectLatest { msg ->
                 if (msg != null) {
-                    // TODO: Snackbar / Toast 등으로 표시
-                    // Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    android.util.Log.e("Login", "errorMessage from ViewModel = $msg")
+                    // TODO: Snackbar / Toast 등
                     viewModel.clearError()
                 }
             }

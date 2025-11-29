@@ -43,7 +43,7 @@ class ProfileEditViewModel(
                 height.value = authUser.height.toInt().toString()
                 weight.value = authUser.weight.toInt().toString()
                 muscleMass.value = authUser.muscleMass?.toInt()?.toString().orEmpty()
-                skillLevel.value = authUser.skillLevel
+                skillLevel.value = authUser.skillLevel.orEmpty()
                 favoriteSports.value = authUser.favoriteSports
             }.onFailure { e ->
                 _errorMessage.value = e.message ?: "프로필을 불러오지 못했습니다."

@@ -19,6 +19,7 @@ class SessionManager(
         .map { prefs -> prefs[KEY_ACCESS_TOKEN] }
 
     suspend fun saveAccessToken(token: String) {
+        android.util.Log.d("SessionManager", "saveAccessToken = $token")
         dataStore.edit { prefs ->
             prefs[KEY_ACCESS_TOKEN] = token
         }
