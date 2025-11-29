@@ -1,4 +1,6 @@
 .venv/
 .vscode/
 baro_backend/.env
+.env
+__pycache__/
 .DS_Store
