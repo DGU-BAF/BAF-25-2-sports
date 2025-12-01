@@ -4,8 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # 모듈별 라우터 임포트
 from app.modules.auth.router import auth_router, users_router 
 from app.modules.bot.router import router as bot_router
-# 추후 추가될 라우터들
-# from app.modules.party.router import router as party_router
+from app.modules.party.router import router as party_router
 
 app = FastAPI(
     title="Baro Backend API",
@@ -26,7 +25,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(bot_router)
-# app.include_router(party_router)
+app.include_router(party_router)
 
 @app.get("/")
 def health_check():

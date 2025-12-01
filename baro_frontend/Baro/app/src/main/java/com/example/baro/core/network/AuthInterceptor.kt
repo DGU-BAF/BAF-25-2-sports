@@ -11,21 +11,23 @@ class AuthInterceptor(
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val original = chain.request()
+        val originalRequest = chain.request()
 
-        // DataStore(Flow) → 현재 토큰 1번만 동기적으로 꺼냄
-        val token = runBlocking {
+        // DataStore 에서 accessToken 한 번만 동기적으로 가져오기
+        val accessToken = runBlocking {
             sessionManager.accessToken.first()
         }
 
-        val newRequest = if (token.isNullOrBlank()) {
-            original
-        } else {
-            original.newBuilder()
-                .addHeader("Authorization", "Bearer $token")
-                .build()
+        // 토큰이 없으면 헤더 추가 없이 그대로 진행
+        if (accessToken.isNullOrBlank()) {
+            return chain.proceed(originalRequest)
         }
 
-        return chain.proceed(newRequest)
+        // 백엔드에서 사용하는 형식: Authorization: Bearer <JWT>
+        val authedRequest = originalRequest.newBuilder()
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        return chain.proceed(authedRequest)
     }
 }
