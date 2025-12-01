@@ -1,7 +1,12 @@
 from datetime import datetime
-from .weather import get_simple_weather
+import logging
+
 from .graph import run_agent
+from .weather import get_simple_weather
 from app.modules.bot.schemas import ChatRequest
+from openai import RateLimitError
+
+logger = logging.getLogger(__name__)
 
 def calculate_age(birth_date_str: str) -> int:
     """YYYY-MM-DD 문자열을 받아 만 나이를 계산"""
@@ -70,4 +75,11 @@ def process_bot_message(req: ChatRequest) -> str:
     # 최종 메시지: 프로필 정보 + 사용자 실제 질문
     final_prompt = system_instruction + req.message
 
-    return run_agent(final_prompt)
+    try:
+        return run_agent(final_prompt)
+    except RateLimitError:
+        logger.warning("OpenAI rate limit exceeded while processing bot message")
+        return "지금은 챗봇 서버에 요청이 너무 많아서 잠시 응답을 줄 수 없어요. 잠시 후 다시 시도해 주세요."
+    except Exception:
+        logger.exception("Unexpected error while calling agent")
+        return "챗봇 응답 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."

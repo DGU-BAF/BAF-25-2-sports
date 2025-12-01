@@ -15,7 +15,7 @@
         android:padding="12dp"
         android:text="운동을 추천해줘"
         android:textColor="@color/black"
-        android:textSize="14sp"
+        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/guidelineStart"
         app:layout_constraintTop_toTopOf="parent" />
