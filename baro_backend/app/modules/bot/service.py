@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 
+# [수정] run_agent 인자가 바뀌었으므로 호출 방식 변경 필요
 from .graph import run_agent
 from .weather import get_simple_weather
 from app.modules.bot.schemas import ChatRequest
@@ -26,7 +27,7 @@ def is_weather_only_query(msg: str) -> bool:
     return any(k in text for k in weather_kw) and not any(k in text for k in sports_kw)
 
 def process_bot_message(req: ChatRequest) -> str:
-    # 1. 날씨만 묻는 경우 (위치 정보가 있을 때만)
+    # 1. 날씨만 묻는 경우 (위치 정보가 있을 때만) - 기존 로직 유지
     if is_weather_only_query(req.message) and req.latitude and req.longitude:
         info = get_simple_weather(req.latitude, req.longitude)
         if info is None:
@@ -67,7 +68,7 @@ def process_bot_message(req: ChatRequest) -> str:
     if req.latitude and req.longitude:
         user_context.append(f"현재 위치(위도: {req.latitude}, 경도: {req.longitude})")
 
-    # 프롬프트 조합
+    # 프롬프트 조합 (이 정보는 대화 맥락에 매번 포함됨)
     system_instruction = ""
     if user_context:
         system_instruction = "[사용자 프로필 정보]\n" + "\n".join(user_context) + "\n\n이 정보를 바탕으로 사용자의 질문에 답변해.\n"
@@ -76,7 +77,20 @@ def process_bot_message(req: ChatRequest) -> str:
     final_prompt = system_instruction + req.message
 
     try:
-        return run_agent(final_prompt)
+        # [중요 변경] thread_id를 추출하여 run_agent에 전달
+        # 프론트엔드에서 thread_id를 보내주지 않으면 'default_user'로 처리되지만,
+        # 기억 기능을 제대로 쓰려면 ChatRequest 스키마에 thread_id가 반드시 있어야 합니다.
+        
+        # 1순위: req 객체에 thread_id 필드가 있다면 사용
+        # 2순위: 없다면 user_id 등을 문자열로 변환해 사용
+        # 3순위: 그것도 없다면 임시값 (기억이 섞일 수 있음)
+        thread_id = getattr(req, "thread_id", getattr(req, "user_id", "default_global_thread"))
+        
+        # thread_id를 문자열로 확실히 변환
+        thread_id = str(thread_id)
+
+        return run_agent(final_prompt, thread_id)
+        
     except RateLimitError:
         logger.warning("OpenAI rate limit exceeded while processing bot message")
         return "지금은 챗봇 서버에 요청이 너무 많아서 잠시 응답을 줄 수 없어요. 잠시 후 다시 시도해 주세요."

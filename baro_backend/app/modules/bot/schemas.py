@@ -16,6 +16,11 @@ class ChatRequest(BaseModel):
 
     # (필수) 사용자가 실제로 보낸 메시지
     message: str
+    
+    # [수정] 대화 맥락을 유지하기 위한 고유 ID (프론트엔드에서 생성한 채팅방 ID 또는 UUID)
+    # Optional로 처리하여 기존 코드와의 호환성을 유지하되, 
+    # 기억 기능을 사용하려면 프론트엔드에서 반드시 값을 보내야 함
+    thread_id: str | None = None
 
     # (1) 기본 정보
     nickname: str | None = None
@@ -35,7 +40,7 @@ class ChatRequest(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
 
-    # (5) 기타 컨텍스트 (필요하면 나중에 사용)
+    # (5) 기타 컨텍스트
     user_id: str | None = None
     room_id: str | None = None
 
@@ -75,6 +80,9 @@ class BotRequest(BaseModel):
     안드로이드 BotRequestDto 에 대응
     """
     text: str
+    
+    # [참고] 만약 안드로이드 BotRequestDto 쪽에서도 thread_id를 보낸다면 여기도 추가 필요
+    # thread_id: str | None = None 
 
 
 class BotResponse(BaseModel):
