@@ -9,3 +9,4 @@ langchain-core
 langchain-openai
 
 pydantic
+supabase

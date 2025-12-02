@@ -73,9 +73,6 @@ def get_messages(room_id: str) -> List[ChatMessage]:
 
 @router.post("/rooms/{room_id}/messages", response_model=BotResponse)
 def send_message(room_id: str, req: BotRequest) -> BotResponse:
-    """
-    안드로이드 → 서버 → 기존 그래프/LLM 챗봇 로직 연결하는 핵심 부분
-    """
     logger.info("send_message called: room_id=%s, text=%s", room_id, req.text)
 
     if room_id not in _rooms_messages:
@@ -91,36 +88,24 @@ def send_message(room_id: str, req: BotRequest) -> BotResponse:
     )
     _rooms_messages[room_id].append(user_msg)
 
-    # 2) 기존 챗봇 엔진 호출
-    #    필요 필드에 맞게 AgentChatRequest 생성해서 넘기면 됨
+    # 2) 기존 챗봇 엔진 호출할 때 thread_id = room_id 로 사용
     agent_req = AgentChatRequest(
         message=req.text,
-        # 필요한 다른 필드들(user_id, location 등)이 있으면 여기서 세팅
-        # user_id=user_id, ...
+        thread_id=room_id,   # ← 여기 중요
+        room_id=room_id,     # (원하면 같이 세팅)
+        # user_id 등 나중에 필요하면 추가
     )
-    try:
-        agent_answer = process_bot_message(agent_req)
-        # process_bot_message 가 ChatResponse 를 반환한다면
-        # agent_answer_text = agent_answer.answer  이런 식으로 꺼내면 됨
-        if hasattr(agent_answer, "answer"):
-            agent_answer_text = agent_answer.answer
-        else:
-            agent_answer_text = str(agent_answer)
-    except Exception as e:
-        logger.exception("Error while processing bot message")
-        raise HTTPException(status_code=500, detail=str(e))
+    agent_answer = process_bot_message(agent_req)
 
     # 3) 봇 메시지 저장
     bot_msg = ChatMessage(
         id=str(uuid.uuid4()),
-        text=agent_answer_text,
+        text=agent_answer,
         sender="BOT",
         timestamp=_now_millis(),
     )
     _rooms_messages[room_id].append(bot_msg)
 
-    # 4) 방 summary 갱신
     _update_room_summary(room_id, last_message_text=bot_msg.text)
 
-    # 안드쪽 규격: BotResponseDto(messages: List<ChatMessageDto>)
     return BotResponse(messages=[bot_msg])

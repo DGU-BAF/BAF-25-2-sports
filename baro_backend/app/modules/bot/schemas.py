@@ -82,7 +82,7 @@ class BotRequest(BaseModel):
     text: str
     
     # [참고] 만약 안드로이드 BotRequestDto 쪽에서도 thread_id를 보낸다면 여기도 추가 필요
-    # thread_id: str | None = None 
+    thread_id: str | None = None 
 
 
 class BotResponse(BaseModel):
