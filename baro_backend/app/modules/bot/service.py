@@ -6,6 +6,7 @@ from .graph import run_agent
 from .weather import get_simple_weather
 from app.modules.bot.schemas import ChatRequest
 from openai import RateLimitError
+from app.core.supabase import supabase_client  # Supabase 클라이언트 임포트
 
 logger = logging.getLogger(__name__)
 
@@ -78,18 +79,58 @@ def process_bot_message(req: ChatRequest) -> str:
 
     try:
         # [중요 변경] thread_id를 추출하여 run_agent에 전달
-        # 프론트엔드에서 thread_id를 보내주지 않으면 'default_user'로 처리되지만,
-        # 기억 기능을 제대로 쓰려면 ChatRequest 스키마에 thread_id가 반드시 있어야 합니다.
-        
         # 1순위: req 객체에 thread_id 필드가 있다면 사용
         # 2순위: 없다면 user_id 등을 문자열로 변환해 사용
-        # 3순위: 그것도 없다면 임시값 (기억이 섞일 수 있음)
+        # 3순위: 그것도 없다면 임시값
         thread_id = getattr(req, "thread_id", getattr(req, "user_id", "default_global_thread"))
-        
-        # thread_id를 문자열로 확실히 변환
         thread_id = str(thread_id)
 
-        return run_agent(final_prompt, thread_id)
+        # ---------------------------------------------------------------------------
+        # [DB 저장] 1. 세션 정보 저장 (sessions 테이블)
+        # ---------------------------------------------------------------------------
+        try:
+            session_data = {
+                "session_id": thread_id,
+                "updated_at": datetime.now().isoformat()
+            }
+            # user_id가 있다면 함께 저장 (FK 연결을 위해)
+            if hasattr(req, "user_id") and req.user_id:
+                session_data["user_id"] = str(req.user_id)
+
+            supabase_client.schema("app").table("sessions").upsert(session_data).execute()
+        except Exception as e:
+            logger.error(f"Failed to save session to Supabase: {e}")
+
+        # ---------------------------------------------------------------------------
+        # [DB 저장] 2. 사용자 메시지 저장 (messages 테이블)
+        # ---------------------------------------------------------------------------
+        try:
+            supabase_client.schema("app").table("messages").insert({
+                "session_id": thread_id,
+                "role": "user",
+                "content": req.message,  # 시스템 프롬프트 제외, 실제 사용자 메시지만 저장
+                "created_at": datetime.now().isoformat()
+            }).execute()
+        except Exception as e:
+            logger.error(f"Failed to save user message: {e}")
+
+        # [Agent 실행]
+        bot_response = run_agent(final_prompt, thread_id)
+
+        # ---------------------------------------------------------------------------
+        # [DB 저장] 3. 챗봇 응답 저장 (messages 테이블)
+        # ---------------------------------------------------------------------------
+        try:
+            supabase_client.schema("app").table("messages").insert({
+                "session_id": thread_id,
+                "role": "assistant",
+                "content": bot_response,
+                "created_at": datetime.now().isoformat()
+            }).execute()
+        except Exception as e:
+            logger.error(f"Failed to save bot message: {e}")
+
+        return bot_response
         
     except RateLimitError:
         logger.warning("OpenAI rate limit exceeded while processing bot message")
