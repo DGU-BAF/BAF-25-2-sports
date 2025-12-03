@@ -97,7 +97,7 @@ def process_bot_message(req: ChatRequest) -> str:
             if hasattr(req, "user_id") and req.user_id:
                 session_data["user_id"] = str(req.user_id)
 
-            supabase_client.schema("app").table("sessions").upsert(session_data).execute()
+            supabase_client.schema("app").table("chat_session").upsert(session_data).execute()
         except Exception as e:
             logger.error(f"Failed to save session to Supabase: {e}")
 
@@ -105,7 +105,7 @@ def process_bot_message(req: ChatRequest) -> str:
         # [DB 저장] 2. 사용자 메시지 저장 (messages 테이블)
         # ---------------------------------------------------------------------------
         try:
-            supabase_client.schema("app").table("messages").insert({
+            supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
                 "role": "user",
                 "content": req.message,  # 시스템 프롬프트 제외, 실제 사용자 메시지만 저장
@@ -121,7 +121,7 @@ def process_bot_message(req: ChatRequest) -> str:
         # [DB 저장] 3. 챗봇 응답 저장 (messages 테이블)
         # ---------------------------------------------------------------------------
         try:
-            supabase_client.schema("app").table("messages").insert({
+            supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
                 "role": "assistant",
                 "content": bot_response,
