@@ -13,7 +13,7 @@ from .schemas import (
     MemberRating,
 )
 
-FEEDBACK_AVAILABLE_DAYS = 7  # 파티 종료 후 7일 동안 평가 가능 (필요하면 조정)
+FEEDBACK_AVAILABLE_DAYS = 2  # 파티 종료 후 7일 동안 평가 가능 (필요하면 조정)
 
 
 class FeedbackRepository:
