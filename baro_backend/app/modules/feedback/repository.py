@@ -13,7 +13,37 @@ from .schemas import (
     MemberRating,
 )
 
-FEEDBACK_AVAILABLE_DAYS = 2  # 파티 종료 후 7일 동안 평가 가능 (필요하면 조정)
+# 파티 종료 후 2일 동안 평가 가능
+FEEDBACK_AVAILABLE_DAYS = 2
+
+
+def _update_manner_temp(current_temp: float, ratings: list[int]) -> float:
+    """
+    매너온도 업데이트 함수
+    Parameters:
+        current_temp (float): 현재 매너온도
+        ratings (list[int]): 한 파티에서 받은 별점 리스트 (예: [4, 4, 5, 3])
+
+    Returns:
+        float: 업데이트된 매너온도 (0~99 범위로 제한)
+    """
+    if not ratings:
+        return current_temp
+
+    n = len(ratings)
+    total = sum(ratings)
+
+    # 변화량 계산: Δ = (합 - 3*n) / n
+    delta = (total - 3 * n) / n
+
+    # 매너온도 업데이트
+    new_temp = current_temp + delta
+
+    # 0~99 범위 제한
+    new_temp = max(0, min(99, new_temp))
+
+    # 소수점 1자리까지만 반올림
+    return round(new_temp, 1)
 
 
 class FeedbackRepository:
@@ -134,7 +164,7 @@ class FeedbackRepository:
 
         return targets
 
-    # 3) 피드백 submit + (선택) 스포츠맨십 스코어 갱신
+    # 3) 피드백 submit + 매너온도 업데이트
     def submit_feedback(
         self,
         party_id: str,
@@ -165,7 +195,7 @@ class FeedbackRepository:
                     "from_user_id": rater_id,
                     "to_user_id": rating.user_id,
                     "score": rating.rating,
-                    # created_at은 Supabase default now() 쓰면 굳이 안 넣어도 됨
+                    # created_at은 Supabase default now() 사용
                 }
             )
 
@@ -177,31 +207,46 @@ class FeedbackRepository:
         if feedback_res.error:
             raise RuntimeError(f"Supabase error (upsert feedback): {feedback_res.error}")
 
-        # 각 멤버의 sportsmanship 재계산(선택)
+        # 이번 제출에서 ratee(피드백 받은 사람)별 점수 묶기
+        ratee_to_scores: dict[str, list[int]] = {}
         for rating in ratings:
-            self._recalculate_sportsmanship(rating.user_id)
+            ratee_to_scores.setdefault(rating.user_id, []).append(rating.rating)
 
-    def _recalculate_sportsmanship(self, user_id: str) -> None:
-        # 해당 유저(to_user_id)가 받은 모든 score 평균을 sportsmanship 에 반영
-        res = (
-            self._client.table("app.feedback")
-            .select("score")
-            .eq("to_user_id", user_id)
+        # 각 멤버의 매너온도 업데이트
+        for user_id, score_list in ratee_to_scores.items():
+            self._apply_manner_temp_update(user_id, score_list)
+
+    def _apply_manner_temp_update(self, user_id: str, ratings_this_party: list[int]) -> None:
+        """
+        user_profile.sportsmanship 를 현재 매너온도로 보고
+        이번 파티에서 받은 별점 리스트(ratings_this_party)를 사용해 업데이트.
+        """
+
+        if not ratings_this_party:
+            return
+
+        # 현재 매너온도 가져오기
+        cur_res = (
+            self._client.table("app.user_profile")
+            .select("sportsmanship")
+            .eq("id", user_id)
+            .single()
             .execute()
         )
-        if res.error or not res.data:
+        if cur_res.error:
             return
 
-        scores = [row["score"] for row in res.data if row.get("score") is not None]
-        if not scores:
-            return
+        # 기본 매너온도: 값이 없으면 36.5로 시작 (원하면 50 같은 값으로 변경 가능)
+        current_temp = cur_res.data.get("sportsmanship")
+        if current_temp is None:
+            current_temp = 36.5
 
-        avg_score = round(sum(scores) / len(scores))
+        # 네가 정의한 공식으로 업데이트
+        new_temp = _update_manner_temp(float(current_temp), ratings_this_party)
 
-        update_res = (
+        _ = (
             self._client.table("app.user_profile")
-            .update({"sportsmanship": int(avg_score)})
+            .update({"sportsmanship": new_temp})
             .eq("id", user_id)
             .execute()
         )
-        _ = update_res  # 에러 나도 전체 플로우는 막지 않음
