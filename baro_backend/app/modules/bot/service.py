@@ -28,7 +28,7 @@ def is_weather_only_query(msg: str) -> bool:
     return any(k in text for k in weather_kw) and not any(k in text for k in sports_kw)
 
 def process_bot_message(req: ChatRequest) -> str:
-    # 1. 날씨만 묻는 경우 (위치 정보가 있을 때만) - 기존 로직 유지
+    # 1. 날씨만 묻는 경우 (기존 로직 유지)
     if is_weather_only_query(req.message) and req.latitude and req.longitude:
         info = get_simple_weather(req.latitude, req.longitude)
         if info is None:
@@ -42,74 +42,61 @@ def process_bot_message(req: ChatRequest) -> str:
         else:
             return f"현재 기온은 약 {temp:.1f}도이고, 하늘 상태는 {cond}입니다."
 
-    # 2. 챗봇 에이전트에게 전달할 사용자 컨텍스트 생성
+    # 2. 챗봇 에이전트에게 전달할 사용자 컨텍스트 생성 (기존 로직 유지)
     user_context = []
-
-    # (1) 기본 정보
     if req.nickname: user_context.append(f"이름: {req.nickname}")
     if req.gender: user_context.append(f"성별: {req.gender}")
-    
-    # (2) 나이 계산
     if req.birth_date:
         age = calculate_age(req.birth_date)
         if age > 0: user_context.append(f"나이: {age}세")
-
-    # (3) 신체 정보
     if req.height: user_context.append(f"키: {req.height}cm")
     if req.weight: user_context.append(f"체중: {req.weight}kg")
     if req.muscle_mass: user_context.append(f"골격근량: {req.muscle_mass}kg")
-
-    # (4) 운동 성향
     if req.skill_level: user_context.append(f"운동 숙련도: {req.skill_level}")
     if req.favorite_sports: 
         sports_str = ", ".join(req.favorite_sports)
         user_context.append(f"선호 종목: {sports_str}")
-
-    # (5) 위치 정보
     if req.latitude and req.longitude:
         user_context.append(f"현재 위치(위도: {req.latitude}, 경도: {req.longitude})")
 
-    # 프롬프트 조합 (이 정보는 대화 맥락에 매번 포함됨)
     system_instruction = ""
     if user_context:
         system_instruction = "[사용자 프로필 정보]\n" + "\n".join(user_context) + "\n\n이 정보를 바탕으로 사용자의 질문에 답변해.\n"
     
-    # 최종 메시지: 프로필 정보 + 사용자 실제 질문
     final_prompt = system_instruction + req.message
 
     try:
-        # [중요 변경] thread_id를 추출하여 run_agent에 전달
-        # 1순위: req 객체에 thread_id 필드가 있다면 사용
-        # 2순위: 없다면 user_id 등을 문자열로 변환해 사용
-        # 3순위: 그것도 없다면 임시값
+        # thread_id 추출
         thread_id = getattr(req, "thread_id", getattr(req, "user_id", "default_global_thread"))
         thread_id = str(thread_id)
+        current_time = datetime.now().isoformat()
 
         # ---------------------------------------------------------------------------
-        # [DB 저장] 1. 세션 정보 저장 (sessions 테이블)
+        # [DB 저장] 1. 세션 정보 저장 (chat_session 테이블)
+        # 스키마: id, title, last_message, created_at
         # ---------------------------------------------------------------------------
         try:
             session_data = {
-                "session_id": thread_id,
-                "updated_at": datetime.now().isoformat()
+                "id": thread_id,                # session_id -> id
+                "title": f"대화 {thread_id[:8]}", # title (임의 생성)
+                "last_message": req.message,    # last_message
+                "created_at": current_time      # updated_at -> created_at
             }
-            # user_id가 있다면 함께 저장 (FK 연결을 위해)
-            if hasattr(req, "user_id") and req.user_id:
-                session_data["user_id"] = str(req.user_id)
-
+            # upsert: 이미 존재하면 업데이트, 없으면 생성
             supabase_client.schema("app").table("chat_session").upsert(session_data).execute()
         except Exception as e:
             logger.error(f"Failed to save session to Supabase: {e}")
 
         # ---------------------------------------------------------------------------
-        # [DB 저장] 2. 사용자 메시지 저장 (messages 테이블)
+        # [DB 저장] 2. 사용자 메시지 저장 (chat_messages 테이블)
+        # 스키마: id, session_id, text, sender, timestamp
         # ---------------------------------------------------------------------------
         try:
             supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
-                "role": "user",
-                "content": req.message,  # 시스템 프롬프트 제외, 실제 사용자 메시지만 저장
-                "created_at": datetime.now().isoformat()
+                "sender": "user",        # role -> sender
+                "text": req.message,     # content -> text
+                "timestamp": current_time # created_at -> timestamp
             }).execute()
         except Exception as e:
             logger.error(f"Failed to save user message: {e}")
@@ -118,15 +105,24 @@ def process_bot_message(req: ChatRequest) -> str:
         bot_response = run_agent(final_prompt, thread_id)
 
         # ---------------------------------------------------------------------------
-        # [DB 저장] 3. 챗봇 응답 저장 (messages 테이블)
+        # [DB 저장] 3. 챗봇 응답 저장 (chat_messages 테이블)
         # ---------------------------------------------------------------------------
         try:
+            bot_timestamp = datetime.now().isoformat()
+            
+            # 3-1. 챗봇 메시지 INSERT
             supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
-                "role": "assistant",
-                "content": bot_response,
-                "created_at": datetime.now().isoformat()
+                "sender": "assistant",     # role -> sender
+                "text": bot_response,      # content -> text
+                "timestamp": bot_timestamp # created_at -> timestamp
             }).execute()
+
+            # 3-2. 세션 last_message 업데이트 (선택사항)
+            supabase_client.schema("app").table("chat_session").update({
+                "last_message": bot_response
+            }).eq("id", thread_id).execute()
+
         except Exception as e:
             logger.error(f"Failed to save bot message: {e}")
 
