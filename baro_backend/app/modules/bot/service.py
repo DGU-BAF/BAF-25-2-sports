@@ -66,10 +66,14 @@ def process_bot_message(req: ChatRequest) -> str:
     final_prompt = system_instruction + req.message
 
     try:
-        # thread_id 추출
         thread_id = getattr(req, "thread_id", getattr(req, "user_id", "default_global_thread"))
         thread_id = str(thread_id)
-        current_time = datetime.now().isoformat()
+        
+        # 1. 세션용 (TIMESTAMP 타입이라고 가정 시 문자열 사용)
+        session_time_str = datetime.now().isoformat()
+        
+        # 2. 메시지용 (BIGINT 타입이므로 정수 사용 - 밀리초 단위)
+        message_timestamp = int(datetime.now().timestamp() * 1000)
 
         # ---------------------------------------------------------------------------
         # [DB 저장] 1. 세션 정보 저장 (chat_session 테이블)
@@ -77,12 +81,11 @@ def process_bot_message(req: ChatRequest) -> str:
         # ---------------------------------------------------------------------------
         try:
             session_data = {
-                "id": thread_id,                # session_id -> id
-                "title": f"대화 {thread_id[:8]}", # title (임의 생성)
-                "last_message": req.message,    # last_message
-                "created_at": current_time      # updated_at -> created_at
+                "id": thread_id,
+                "title": f"대화 {thread_id[:8]}",
+                "last_message": req.message,
+                "created_at": session_time_str  # TIMESTAMP 타입일 경우 문자열
             }
-            # upsert: 이미 존재하면 업데이트, 없으면 생성
             supabase_client.schema("app").table("chat_session").upsert(session_data).execute()
         except Exception as e:
             logger.error(f"Failed to save session to Supabase: {e}")
@@ -94,9 +97,9 @@ def process_bot_message(req: ChatRequest) -> str:
         try:
             supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
-                "sender": "user",        # role -> sender
-                "text": req.message,     # content -> text
-                "timestamp": current_time # created_at -> timestamp
+                "sender": "user",
+                "text": req.message,
+                "timestamp": message_timestamp  # <--- 정수(bigint)로 입력
             }).execute()
         except Exception as e:
             logger.error(f"Failed to save user message: {e}")
@@ -108,14 +111,14 @@ def process_bot_message(req: ChatRequest) -> str:
         # [DB 저장] 3. 챗봇 응답 저장 (chat_messages 테이블)
         # ---------------------------------------------------------------------------
         try:
-            bot_timestamp = datetime.now().isoformat()
+            # 챗봇 응답 시간도 정수로 생성
+            bot_timestamp = int(datetime.now().timestamp() * 1000)
             
-            # 3-1. 챗봇 메시지 INSERT
             supabase_client.schema("app").table("chat_messages").insert({
                 "session_id": thread_id,
-                "sender": "assistant",     # role -> sender
-                "text": bot_response,      # content -> text
-                "timestamp": bot_timestamp # created_at -> timestamp
+                "sender": "assistant",
+                "text": bot_response,
+                "timestamp": bot_timestamp # <--- 정수(bigint)로 입력
             }).execute()
 
             # 3-2. 세션 last_message 업데이트 (선택사항)

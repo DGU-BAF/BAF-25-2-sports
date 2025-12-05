@@ -24,7 +24,7 @@ llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.3,
     api_key=OPENAI_API_KEY,
-    max_retries=3, 
+    max_retries=1, 
 )
 
 tools = [
@@ -115,7 +115,7 @@ agent = create_react_agent(
 @retry(
     retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
     wait=wait_exponential(multiplier=1, min=2, max=20),
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(2),
     reraise=True
 )
 def invoke_agent_with_retry(user_message: str, config: dict):
