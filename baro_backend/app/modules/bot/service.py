@@ -70,7 +70,7 @@ def process_bot_message(req: ChatRequest) -> str:
         thread_id = str(thread_id)
         
         # 1. 세션용 (TIMESTAMP 타입이라고 가정 시 문자열 사용)
-        session_time_str = datetime.now().isoformat()
+        session_created_at = int(datetime.now().timestamp() * 1000)
         
         # 2. 메시지용 (BIGINT 타입이므로 정수 사용 - 밀리초 단위)
         message_timestamp = int(datetime.now().timestamp() * 1000)
@@ -84,7 +84,7 @@ def process_bot_message(req: ChatRequest) -> str:
                 "id": thread_id,
                 "title": f"대화 {thread_id[:8]}",
                 "last_message": req.message,
-                "created_at": session_time_str  # TIMESTAMP 타입일 경우 문자열
+                "created_at": session_created_at  # [수정 2] 정수형 변수로 교체
             }
             supabase_client.schema("app").table("chat_session").upsert(session_data).execute()
         except Exception as e:
