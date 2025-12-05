@@ -5,9 +5,13 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Dict, List
+from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
+
+# [추가] DB 클라이언트 임포트
+from app.core.supabase import supabase_client
 
 # 안드로이드용 스키마
 from app.modules.bot.schemas import (
@@ -15,8 +19,6 @@ from app.modules.bot.schemas import (
     BotResponse,
     ChatMessage,
     ChatRoomSummary,
-    ChatRequest,
-    ChatResponse,
 )
 
 # 기존 챗봇 엔진용 스키마/서비스
@@ -26,86 +28,92 @@ from app.modules.bot.service import process_bot_message
 router = APIRouter(prefix="/bot", tags=["Bot"])
 logger = logging.getLogger(__name__)
 
-_rooms_messages: Dict[str, List[ChatMessage]] = {}
-_rooms_meta: Dict[str, ChatRoomSummary] = {}
-
-
-def _now_millis() -> int:
-    return int(time.time() * 1000)
-
-
-def _ensure_room_exists(room_id: str) -> None:
-    if room_id not in _rooms_messages:
-        raise HTTPException(status_code=404, detail="Room not found")
-
-
-def _update_room_summary(room_id: str, last_message_text: str) -> None:
-    now = _now_millis()
-    if room_id in _rooms_meta:
-        summary = _rooms_meta[room_id]
-        _rooms_meta[room_id] = ChatRoomSummary(
-            id=summary.id,
-            title=summary.title,
-            lastMessage=last_message_text,
-            createdAt=summary.createdAt,
-        )
-    else:
-        _rooms_meta[room_id] = ChatRoomSummary(
-            id=room_id,
-            title=f"채팅방 {room_id[:8]}",
-            lastMessage=last_message_text,
-            createdAt=now,
-        )
-
+# [수정] 메모리 저장소(_rooms_messages, _rooms_meta) 제거됨
 
 @router.get("/rooms", response_model=List[ChatRoomSummary])
 def get_chat_rooms() -> List[ChatRoomSummary]:
-    return list(_rooms_meta.values())
+    try:
+        # [수정] DB에서 세션 목록 조회 (chat_session 테이블)
+        response = supabase_client.schema("app").table("chat_session")\
+            .select("*").order("created_at", desc=True).execute()
+        
+        rooms = []
+        for item in response.data:
+            # created_at이 ISO 포맷 문자열인 경우 timestamp(ms) 정수로 변환
+            created_at_val = item.get("created_at")
+            created_at_ms = 0
+            
+            if isinstance(created_at_val, str):
+                try:
+                    dt = datetime.fromisoformat(created_at_val)
+                    created_at_ms = int(dt.timestamp() * 1000)
+                except:
+                    created_at_ms = 0
+            elif isinstance(created_at_val, (int, float)):
+                created_at_ms = int(created_at_val)
+
+            rooms.append(ChatRoomSummary(
+                id=item["id"],
+                title=item.get("title", f"채팅방 {item['id'][:8]}"),
+                lastMessage=item.get("last_message", ""),
+                createdAt=created_at_ms,
+            ))
+        return rooms
+    except Exception as e:
+        logger.error(f"Failed to fetch rooms: {e}")
+        return []
 
 
 @router.get("/rooms/{room_id}/messages", response_model=List[ChatMessage])
 def get_messages(room_id: str) -> List[ChatMessage]:
-    if room_id not in _rooms_messages:
-        # 아직 메시지가 한 번도 없는 방이라면 빈 리스트 반환
-        _rooms_messages[room_id] = []
-    return _rooms_messages[room_id]
+    try:
+        # [수정] DB에서 메시지 조회 (chat_messages 테이블)
+        response = supabase_client.schema("app").table("chat_messages")\
+            .select("*").eq("session_id", room_id).order("timestamp", desc=False).execute()
+        
+        messages = []
+        for item in response.data:
+            # DB의 sender('user'/'assistant')를 앱용('USER'/'BOT')으로 매핑
+            db_sender = item.get("sender", "user")
+            if db_sender == "assistant":
+                app_sender = "BOT"
+            else:
+                app_sender = "USER"
+
+            messages.append(ChatMessage(
+                id=str(item.get("id", uuid.uuid4())),
+                text=item["text"],
+                sender=app_sender,
+                timestamp=item["timestamp"]  # service.py에서 이미 ms(int) 단위로 저장함
+            ))
+        return messages
+    except Exception as e:
+        logger.error(f"Failed to fetch messages for room {room_id}: {e}")
+        return []
 
 
 @router.post("/rooms/{room_id}/messages", response_model=BotResponse)
 def send_message(room_id: str, req: BotRequest) -> BotResponse:
     logger.info("send_message called: room_id=%s, text=%s", room_id, req.text)
 
-    if room_id not in _rooms_messages:
-        _rooms_messages[room_id] = []
+    # [수정] 메모리에 직접 append 하던 로직 제거
+    # 대신 process_bot_message 내부에서 DB 저장까지 처리되도록 위임
 
-    # 1) 유저 메시지 저장
-    now = _now_millis()
-    user_msg = ChatMessage(
-        id=str(uuid.uuid4()),
-        text=req.text,
-        sender="USER",
-        timestamp=now,
-    )
-    _rooms_messages[room_id].append(user_msg)
-
-    # 2) 기존 챗봇 엔진 호출할 때 thread_id = room_id 로 사용
     agent_req = AgentChatRequest(
         message=req.text,
-        thread_id=room_id,   # ← 여기 중요
-        room_id=room_id,     # (원하면 같이 세팅)
-        # user_id 등 나중에 필요하면 추가
+        thread_id=room_id,
+        room_id=room_id,
     )
+    
+    # 이 함수 내부에서 유저 메시지 DB 저장 -> 랭체인 실행 -> 봇 응답 DB 저장 수행
     agent_answer = process_bot_message(agent_req)
 
-    # 3) 봇 메시지 저장
+    # 프론트엔드 응답용 객체 생성
     bot_msg = ChatMessage(
         id=str(uuid.uuid4()),
         text=agent_answer,
         sender="BOT",
-        timestamp=_now_millis(),
+        timestamp=int(time.time() * 1000),
     )
-    _rooms_messages[room_id].append(bot_msg)
-
-    _update_room_summary(room_id, last_message_text=bot_msg.text)
 
     return BotResponse(messages=[bot_msg])

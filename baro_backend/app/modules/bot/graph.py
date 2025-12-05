@@ -1,11 +1,19 @@
 # app/modules/bot/graph.py
+import logging
+import os
+from contextlib import contextmanager
+
+# LangChain / LangGraph 관련 임포트
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
-from langgraph.checkpoint.memory import MemorySaver
-import logging
 
-# 재시도 로직을 위한 라이브러리 (requirements.txt에 tenacity 추가 필요)
+# [추가] DB(Postgres) 기반 영속성 저장을 위한 라이브러리
+# 설치 필요: pip install langgraph-checkpoint-postgres psycopg-pool
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
+
+# 재시도 로직을 위한 라이브러리
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import RateLimitError, APITimeoutError
 
@@ -19,12 +27,18 @@ from .tools import (
 
 logger = logging.getLogger(__name__)
 
-# 모델 설정 (일시적 오류 자동 재시도 max_retries 추가)
+# [설정] Supabase Database 연결 문자열 (Connection String)
+# Supabase 대시보드 > Settings > Database > Connection String > URI 모드에서 확인 가능
+# 예: "postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres"
+# 보안을 위해 환경변수나 app/config.py에서 가져오는 것을 권장합니다.
+DB_CONNECTION_STRING = os.getenv("DB_CONNECTION_STRING")
+
+# 모델 설정 (재시도는 tenacity에 위임하므로 max_retries=0)
 llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.3,
     api_key=OPENAI_API_KEY,
-    max_retries=3, 
+    max_retries=0, 
 )
 
 tools = [
@@ -99,15 +113,32 @@ SYSTEM_PROMPT = """
 - 서로 섞지 않는다.
 """
 
-# 메모리 저장소 생성
-memory = MemorySaver()
+# [수정] MemorySaver 대신 PostgresSaver(DB 기반) 사용 설정
+# Connection Pool 생성 (서버 생명주기 동안 유지)
+connection_kwargs = {
+    "autocommit": True,
+    "prepare_threshold": None,
+}
 
-# [수정됨] state_modifier -> prompt로 변경
-# 최신 langgraph 버전에서는 prompt 인자를 사용하여 시스템 메시지를 설정합니다.
+# DB 연결 풀 초기화
+pool = ConnectionPool(
+    conninfo=DB_CONNECTION_STRING,
+    max_size=20,
+    kwargs=connection_kwargs
+)
+
+# Postgres Checkpointer 생성
+checkpointer = PostgresSaver(pool)
+
+# [중요] 최초 실행 시 테이블(checkpoints, checkpoint_blobs 등)이 없으면 자동 생성
+# 프로덕션에서는 마이그레이션 스크립트로 분리하는 것이 좋으나 편의상 여기서 실행
+checkpointer.setup()
+
+# Agent 생성 (DB Checkpointer 연결)
 agent = create_react_agent(
     llm, 
     tools, 
-    checkpointer=memory,
+    checkpointer=checkpointer,
     prompt=SYSTEM_PROMPT 
 )
 
@@ -115,7 +146,7 @@ agent = create_react_agent(
 @retry(
     retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
     wait=wait_exponential(multiplier=1, min=2, max=20),
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(3), # 재시도 횟수 3회로 증가
     reraise=True
 )
 def invoke_agent_with_retry(user_message: str, config: dict):
@@ -131,7 +162,7 @@ def invoke_agent_with_retry(user_message: str, config: dict):
 
 def run_agent(user_message: str, thread_id: str) -> str:
     try:
-        # thread_id를 config에 설정 (이전 대화 기억용)
+        # thread_id를 config에 설정 (이 ID를 기준으로 DB에서 대화 맥락을 불러옴)
         config = {"configurable": {"thread_id": thread_id}}
         
         # 재시도 함수 호출
