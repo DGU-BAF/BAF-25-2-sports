@@ -13,7 +13,7 @@ from app.config import (
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
     SUPABASE_AUTH_SCHEMA,
-    SUPABASE_USERS_TABLE,   # 여기에 "user_profile" 이 들어 있어야 함
+    SUPABASE_USERS_TABLE,   
 )
 from app.config_auth import (
     JWT_SECRET_KEY,
@@ -115,8 +115,7 @@ def verify_jwt_token(token: str) -> UUID:
 
 
 # ============================================================
-# Supabase user_profile 접근 함수들
-#   - SUPABASE_USERS_TABLE 은 "user_profile" 이어야 함
+# Supabase user_profile 접근 함수
 # ============================================================
 
 def _get_user_row_by_kakao(kakao_id: str) -> Optional[Dict[str, Any]]:
@@ -234,7 +233,7 @@ def login_with_kakao(access_token: str) -> tuple[AuthUser, bool]:
 
     user_id = UUID(user_row["uuid"])
 
-    # 지금 구조에서는 users 테이블에만 정보가 있으니 profile_row 는 None 으로 두어도 됨
+    
     auth_user = _row_to_auth_user(user_row, profile_row=None, kakao_nickname=nickname)
 
     return auth_user, is_new

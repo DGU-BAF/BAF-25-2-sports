@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록 (이곳에 모두 등록해야 Swagger에 표시됩니다)
+# 라우터 등록
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(bot_router)

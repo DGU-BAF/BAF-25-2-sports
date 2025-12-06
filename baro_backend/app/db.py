@@ -131,7 +131,7 @@ def get_profiled_facilities(
 
     facilities = _fetch_all_facilities()
     intensity_map = _fetch_exercise_methods()
-    # ✅ 날씨 보고 실내만 추천해야 하는지 결정
+    # 날씨 보고 실내만 추천해야 하는지 결정
     indoor_only = is_indoor_only(user_lat, user_lon)
     print(f"[recommend-debug] indoor_only={indoor_only}", flush=True)
 
@@ -245,7 +245,7 @@ def get_profiled_facilities(
         "facilities": results[:limit],
     }
 
-# ✅ sample 스키마(파티 테이블용) 헤더
+# sample 스키마(파티 테이블용) 헤더
 def _sample_headers() -> Dict[str, str]:
     return {
         "apikey": SUPABASE_ANON_KEY,

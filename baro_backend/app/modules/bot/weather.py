@@ -55,7 +55,7 @@ def is_indoor_only(lat: float, lon: float) -> bool:
     nx, ny = _latlon_to_nxny(lat, lon)
     base_date, base_time = _current_base_datetime()
 
-    # ✅ 초단기실황 API 사용 (T1H, PTY가 확실히 내려옴)
+    # 초단기실황 API 사용
     url = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
     params = {
         "serviceKey": KMA_API_KEY,
@@ -137,7 +137,7 @@ def get_simple_weather(lat: float, lon: float) -> Optional[Dict[str, Any]]:
     if not KMA_API_KEY:
         return None
 
-    # 👉 is_indoor_only에서 쓰던 것과 같은 방식으로 호출
+    # is_indoor_only에서 쓰던 것과 같은 방식으로 호출
     nx, ny = _latlon_to_nxny(lat, lon)
 
     # 현재 시간 기준 base_date/base_time 계산 (초단기실황 규칙)

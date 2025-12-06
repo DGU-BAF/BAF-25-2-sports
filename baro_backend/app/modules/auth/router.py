@@ -82,7 +82,7 @@ def sign_up_endpoint(
     user_id: UUID = Depends(get_current_user_id),
 ):
     auth_user = sign_up(user_id, req)
-    # 여기서도 수동으로 매핑해 주는 편이 안전함
+    
     return UserDto(
         id=auth_user.id,
         kakao_id=auth_user.kakao_id,
@@ -102,7 +102,7 @@ def sign_up_endpoint(
 
 @auth_router.post("/logout")
 def logout(user_id: UUID = Depends(get_current_user_id)):
-    # 서버에서 따로 세션을 안 들고 있으면 그냥 200만 반환해도 됨
+    
     return {"detail": "logged out"}
 
 

@@ -3,7 +3,7 @@ from fastapi import Header, HTTPException, status, Depends
 from uuid import UUID
 
 from .service import verify_jwt_token, _get_user_row_by_id, _row_to_auth_user
-from .schemas import AuthUser  # AuthUser 위치에 따라 경로 맞춰줘 (pydantic 모델 / dataclass 등)
+from .schemas import AuthUser
 
 
 async def get_current_auth_user(

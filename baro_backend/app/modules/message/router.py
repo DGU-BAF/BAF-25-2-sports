@@ -45,14 +45,14 @@ def get_message_rooms(
 )
 def get_messages(
     room_id: str,
-    current_user=Depends(get_current_user),  # 필요 없으면 삭제해도 됨
+    current_user=Depends(get_current_user),
     service: MessageService = Depends(get_message_service),
 ):
     """
     특정 채팅방의 전체 메시지
     Android: GET /messages/{roomId}
     """
-    # 여기서 room 접근 권한 체크하려면 current_user.id로 party_member 조회하는 로직 추가
+    
     return service.get_messages(room_id=room_id)
 
 
@@ -70,7 +70,7 @@ def send_message(
     Android: POST /messages
     body: { "room_id": "...", "content": "..." }
     """
-    # current_user.name 대신 닉네임 필드가 있으면 그걸 사용
+    
     user_name = getattr(current_user, "name", None) or getattr(
         current_user, "nickname", "익명"
     )

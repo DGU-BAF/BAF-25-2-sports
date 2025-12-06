@@ -8,8 +8,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage
 
-# [추가] DB(Postgres) 기반 영속성 저장을 위한 라이브러리
-# 설치 필요: pip install langgraph-checkpoint-postgres psycopg-pool
+#  DB(Postgres) 기반 영속성 저장을 위한 라이브러리
 from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg_pool import ConnectionPool
 
@@ -27,13 +26,10 @@ from .tools import (
 
 logger = logging.getLogger(__name__)
 
-# [설정] Supabase Database 연결 문자열 (Connection String)
-# Supabase 대시보드 > Settings > Database > Connection String > URI 모드에서 확인 가능
-# 예: "postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres"
-# 보안을 위해 환경변수나 app/config.py에서 가져오는 것을 권장합니다.
+
 DB_CONNECTION_STRING = os.getenv("DB_CONNECTION_STRING")
 
-# 모델 설정 (재시도는 tenacity에 위임하므로 max_retries=0)
+# 모델 설정
 llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.3,
@@ -113,7 +109,7 @@ SYSTEM_PROMPT = """
 - 서로 섞지 않는다.
 """
 
-# [수정] MemorySaver 대신 PostgresSaver(DB 기반) 사용 설정
+
 # Connection Pool 생성 (서버 생명주기 동안 유지)
 connection_kwargs = {
     "autocommit": True,
@@ -130,8 +126,7 @@ pool = ConnectionPool(
 # Postgres Checkpointer 생성
 checkpointer = PostgresSaver(pool)
 
-# [중요] 최초 실행 시 테이블(checkpoints, checkpoint_blobs 등)이 없으면 자동 생성
-# 프로덕션에서는 마이그레이션 스크립트로 분리하는 것이 좋으나 편의상 여기서 실행
+
 checkpointer.setup()
 
 # Agent 생성 (DB Checkpointer 연결)
@@ -150,7 +145,7 @@ agent = create_react_agent(
     reraise=True
 )
 def invoke_agent_with_retry(user_message: str, config: dict):
-    # prompt에 이미 SYSTEM_PROMPT가 포함되었으므로 여기서는 사용자 메시지만 전달
+   
     return agent.invoke(
         {
             "messages": [
@@ -162,7 +157,7 @@ def invoke_agent_with_retry(user_message: str, config: dict):
 
 def run_agent(user_message: str, thread_id: str) -> str:
     try:
-        # thread_id를 config에 설정 (이 ID를 기준으로 DB에서 대화 맥락을 불러옴)
+        # thread_id를 config에 설정
         config = {"configurable": {"thread_id": thread_id}}
         
         # 재시도 함수 호출

@@ -142,7 +142,7 @@ class MessageService:
             "sender_id": user_id,
             "sender_name": user_name,
             "content": req.content,
-            # created_at은 DB default now() 쓰면 생략 가능
+            
         }
 
         res = self._client.table("app.party_message").insert(payload).execute()
@@ -161,7 +161,7 @@ class MessageService:
         try:
             dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except Exception:
-            # 포맷이 애매하면 그냥 naive로 파싱
+           
             dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)

@@ -8,11 +8,11 @@ import uuid
 from typing import List
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends  # <--- [추가] Depends
-from app.modules.auth.deps import get_current_auth_user  # <--- [추가]
-from app.modules.auth.schemas import AuthUser            # <--- [추가]
+from fastapi import APIRouter, HTTPException, Depends
+from app.modules.auth.deps import get_current_auth_user
+from app.modules.auth.schemas import AuthUser
 
-# [추가] DB 클라이언트 임포트
+
 from app.core.supabase import supabase_client
 
 # 안드로이드용 스키마
@@ -30,18 +30,17 @@ from app.modules.bot.service import process_bot_message
 router = APIRouter(prefix="/bot", tags=["Bot"])
 logger = logging.getLogger(__name__)
 
-# [수정] 메모리 저장소(_rooms_messages, _rooms_meta) 제거됨
 
 @router.get("/rooms", response_model=List[ChatRoomSummary])
 def get_chat_rooms() -> List[ChatRoomSummary]:
     try:
-        # [수정] DB에서 세션 목록 조회 (chat_session 테이블)
+        # DB에서 세션 목록 조회
         response = supabase_client.schema("app").table("chat_session")\
             .select("*").order("created_at", desc=True).execute()
         
         rooms = []
         for item in response.data:
-            # created_at이 ISO 포맷 문자열인 경우 timestamp(ms) 정수로 변환
+            
             created_at_val = item.get("created_at")
             created_at_ms = 0
             
@@ -69,13 +68,13 @@ def get_chat_rooms() -> List[ChatRoomSummary]:
 @router.get("/rooms/{room_id}/messages", response_model=List[ChatMessage])
 def get_messages(room_id: str) -> List[ChatMessage]:
     try:
-        # [수정] DB에서 메시지 조회 (chat_messages 테이블)
+        # DB에서 메시지 조회
         response = supabase_client.schema("app").table("chat_messages")\
             .select("*").eq("session_id", room_id).order("timestamp", desc=False).execute()
         
         messages = []
         for item in response.data:
-            # DB의 sender('user'/'assistant')를 앱용('USER'/'BOT')으로 매핑
+            
             db_sender = item.get("sender", "user")
             if db_sender == "assistant":
                 app_sender = "BOT"
@@ -86,7 +85,7 @@ def get_messages(room_id: str) -> List[ChatMessage]:
                 id=str(item.get("id", uuid.uuid4())),
                 text=item["text"],
                 sender=app_sender,
-                timestamp=item["timestamp"]  # service.py에서 이미 ms(int) 단위로 저장함
+                timestamp=item["timestamp"]
             ))
         return messages
     except Exception as e:
@@ -98,11 +97,11 @@ def get_messages(room_id: str) -> List[ChatMessage]:
 def send_message(
     room_id: str, 
     req: BotRequest,
-    user: AuthUser = Depends(get_current_auth_user)  # <--- [추가] 사용자 정보 주입
+    user: AuthUser = Depends(get_current_auth_user)
 ) -> BotResponse:
     logger.info("send_message called: room_id=%s, text=%s", room_id, req.text)
 
-    # [수정] 사용자 프로필 정보를 포함하여 ChatRequest 생성
+    # 사용자 프로필 정보를 포함하여 ChatRequest 생성
     agent_req = AgentChatRequest(
         message=req.text,
         thread_id=room_id,
@@ -120,7 +119,7 @@ def send_message(
         longitude=user.longitude
     )
     
-    # 이 함수 내부에서 유저 메시지 DB 저장 -> 랭체인 실행 -> 봇 응답 DB 저장 수행
+    # 유저 메시지 DB 저장 -> 랭체인 실행 -> 봇 응답 DB 저장 수행
     agent_answer = process_bot_message(agent_req)
 
     # 프론트엔드 응답용 객체 생성

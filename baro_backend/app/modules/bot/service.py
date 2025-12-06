@@ -1,7 +1,6 @@
 from datetime import datetime
 import logging
 
-# [수정] run_agent 인자가 바뀌었으므로 호출 방식 변경 필요
 from .graph import run_agent
 from .weather import get_simple_weather
 from app.modules.bot.schemas import ChatRequest
@@ -49,7 +48,7 @@ def process_bot_message(req: ChatRequest) -> str:
     if req.birth_date:
         age = calculate_age(req.birth_date)
         if age > 0: user_context.append(f"나이: {age}세")
-    elif req.age:  # <--- [추가] birth_date 대신 age가 들어온 경우 처리
+    elif req.age:
         user_context.append(f"나이: {req.age}세")
     if req.height: user_context.append(f"키: {req.height}cm")
     if req.weight: user_context.append(f"체중: {req.weight}kg")
@@ -123,7 +122,7 @@ def process_bot_message(req: ChatRequest) -> str:
                 "timestamp": bot_timestamp # <--- 정수(bigint)로 입력
             }).execute()
 
-            # 3-2. 세션 last_message 업데이트 (선택사항)
+            # 3-2. 세션 last_message 업데이트
             supabase_client.schema("app").table("chat_session").update({
                 "last_message": bot_response
             }).eq("id", thread_id).execute()

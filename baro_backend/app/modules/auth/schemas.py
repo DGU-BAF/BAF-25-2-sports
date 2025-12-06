@@ -23,8 +23,8 @@ class AuthUser(BaseModel):
 class BaseSchema(BaseModel):
     # pydantic v2 스타일 설정
     model_config = ConfigDict(
-        populate_by_name=True,   # 예전 allow_population_by_field_name=True
-        from_attributes=True,    # 예전 orm_mode=True (from_orm 쓸 때 필요)
+        populate_by_name=True, 
+        from_attributes=True, 
     )
 
 
@@ -48,7 +48,7 @@ class SignUpRequestDto(BaseSchema):
 
 
 class ProfileUpdateRequestDto(BaseSchema):
-    # 프론트 JSON: nickname?, height?, weight?, muscleMass?, skillLevel?, favoriteSports?, latitude?, longitude?
+    # 프론트 JSON
     nickname: Optional[str] = None
     height: Optional[float] = None
     weight: Optional[float] = None
@@ -62,8 +62,8 @@ class ProfileUpdateRequestDto(BaseSchema):
 # ====== 응답 DTO ======
 
 class UserDto(BaseSchema):
-    # 프론트 UserDto 에 맞춰서
-    id: UUID  # 프론트에서는 String, 서버에서는 UUID → 자동 파싱
+    
+    id: UUID  
     kakao_id: str = Field(..., alias="kakaoId")
     nickname: str
 
@@ -83,7 +83,7 @@ class UserDto(BaseSchema):
 
 
 class LoginResponseDto(BaseSchema):
-    # 프론트 LoginResponseDto 에 맞춰서
+    
     is_new_user: bool = Field(..., alias="isNewUser")
     access_token: Optional[str] = Field(None, alias="accessToken")
     user: Optional[UserDto] = None
