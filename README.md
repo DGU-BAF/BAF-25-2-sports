@@ -79,10 +79,57 @@ Baro/
 
 ## 뷰 살펴보기
 ### app icon
+| Splash | App Icon |
+|--------|----------|
+| <img src="./app images/loading.png" width="230"> | <img src="./app images/logo.jpg" width="230"> |
+| 앱 실행 시 처음 보이는 화면 | 앱 아이콘 |
+
 ### party view
+| Party List | Party Create | Party Detail |
+|------------|--------------|--------------|
+| <img src="./app images/party.png" width="230"> | <img src="./app images/party create.png" width="230"> | <img src="./app images/party detail.png" width="230"> |
+| 파티 목록 화면 | 파티 생성 화면 | 파티 상세 화면 |
+
 ### message view
+| Message List | Message Chat |
+|--------------|--------------|
+| <img src="./app images/message.png" width="230"> | <img src="./app images/message chat.png" width="230"> |
+| 내가 참여한 파티 목록 | 파티원과 대화하는 채팅 화면 |
+
 ### chatbot view
+| Bot (Before) | Bot | Bot (After) |
+|--------------|------|-------------|
+| <img src="./app images/bot before.png" width="230"> | <img src="./app images/bot.png" width="230"> | <img src="./app images/bot after.png" width="230"> |
+| 추천 이전 챗봇 화면 | 챗봇 메인 화면 | 운동 추천 결과 화면 |
+
 ### login view
-### other view
+| Login | Signup Step 1 | Signup Step 2 |
+|--------|----------------|----------------|
+| <img src="./app images/login.png" width="230"> | <img src="./app images/signup 1.png" width="230"> | <img src="./app images/signup 2.png" width="230"> |
+| 로그인 화면 | 신체 정보 입력 1단계 | 신체 정보 입력 2단계 |
+
+### feedback view
+| Feedback | Sportsmanship Rating | Feedback Send |
+|----------|------------------------|----------------|
+| <img src="./app images/feedback.png" width="230"> | <img src="./app images/feedback sportsmanship.png" width="230"> | <img src="./app images/feedback send.png" width="230"> |
+| 피드백 메인 화면 | 스포츠맨십 평가 화면 | 피드백 전송 완료 |
+
+### settings view
+| Settings | Profile Edit |
+|----------|--------------|
+| <img src="./app images/settings.png" width="230"> | <img src="./app images/settings profile.png" width="230"> |
+| 설정 메인 | 프로필 수정 화면 |
+
+# 백엔드
+설명 필요
+
+# 데이터베이스
+설명 필요
+
 
 # 팀소개
+
+| 팀원   | 김현   | 서정유 | 최연식  |
+|--------|------------------------|-----------------------------|-----------------------------|
+| 주소   | [@kimhyun09](https://github.com/kimhyun09) |[@seojeongyoo](https://github.com/seojeongyoo)  | [@yeonsik-choi](https://github.com/yeonsik-choi)|
+| 역할   | 안드로이드 전체<br>서버 일부<br>목업 데이터 설계 | DB 설계<br>데이터 정리| 챗봇 개발<br>서버일부        |
