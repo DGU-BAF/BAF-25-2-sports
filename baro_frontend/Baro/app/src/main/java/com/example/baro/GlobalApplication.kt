@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.baro.feature.auth.data.local.SessionManager
+import com.example.baro.feature.bot.BotServiceLocator
 import com.example.baro.feature.feedback.FeedbackServiceLocator
 import com.example.baro.feature.party.PartyServiceLocator
 import com.kakao.sdk.common.KakaoSdk
@@ -62,6 +64,10 @@ class GlobalApplication : Application() {
 
         // GlobalApplication.onCreate() 안
         FeedbackServiceLocator.init(retrofit)
+        // [추가]
+        val sessionManager = SessionManager(dataStore)
+        BotServiceLocator.init(sessionManager)
+
 
     }
 }
