@@ -4,3 +4,6 @@ baro_backend/.env
 .env
 __pycache__/
 .DS_Store
+*.jksbaro_frontend/Baro/baro-release-keyjks
+*.jks
+.DS_Store
