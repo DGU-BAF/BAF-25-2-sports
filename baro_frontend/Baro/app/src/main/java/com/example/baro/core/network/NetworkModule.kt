@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
 
     // 실기기에서 확인한 FastAPI 주소
-    const val BASE_URL: String = "http://192.168.45.157:8000/"
+    const val BASE_URL: String = "https://baro-backend.fly.dev/"
 
     // --- JSON 설정 (kotlinx) ---
 

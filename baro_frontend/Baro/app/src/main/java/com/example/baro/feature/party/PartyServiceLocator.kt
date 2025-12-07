@@ -18,7 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object PartyServiceLocator {
 
     // FastAPI 서버 주소 (BotServiceLocator 와 동일하게 맞추기)
-    private const val BASE_URL = "http://192.168.45.157:8000/"
+    private const val BASE_URL = "https://baro-backend.fly.dev/"
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
