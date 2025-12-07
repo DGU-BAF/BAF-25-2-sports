@@ -67,8 +67,43 @@ Baro/
 │   └── gradle/                                 # Gradle 래퍼 및 설정
 │       └── libs.versions.toml                  # 버전 카탈로그(의존성 버전 관리)
 │
-├── baro_backend/                               # FastAPI 기반 서버 (파티, 메시지, 챗봇, 인증 API)
-│                                                # Docker, LangGraph, Supabase 연동 포함
+├── baro_backend/                               # FastAPI 기반 백엔드 서버
+│   ├── app/
+│   │   ├── core/                               # 핵심 인프라 및 설정
+│   │   │   └── supabase.py                     # Supabase 클라이언트 및 DB 연결 설정
+│   │   │
+│   │   ├── modules/                            # 도메인별 기능 모듈 (Router-Service-Repo 구조)
+│   │   │   ├── auth/                           # 사용자 인증 (JWT, OAuth)
+│   │   │   │   ├── deps.py                     # 의존성 주입 (현재 로그인 유저 확인 등)
+│   │   │   │   ├── router.py                   # 로그인, 회원가입 API 엔드포인트
+│   │   │   │   ├── schemas.py                  # Pydantic 데이터 검증 모델
+│   │   │   │   └── service.py                  # 인증 비즈니스 로직
+│   │   │   │
+│   │   │   ├── bot/                            # LangGraph 기반 AI 챗봇
+│   │   │   │   ├── graph.py                    # 챗봇 상태 머신(State Graph) 및 흐름 제어
+│   │   │   │   ├── tools.py                    # 에이전트가 사용하는 도구 (시설 검색, 계산 등)
+│   │   │   │   ├── weather.py                  # 기상청 API 연동 모듈
+│   │   │   │   └── router.py                  # 챗봇 대화 API
+│   │   │   │
+│   │   │   ├── feedback/                       # 스포츠맨십 피드백 시스템
+│   │   │   │   └── repository.py              # 피드백 데이터 DB 쿼리 처리
+│   │   │   │
+│   │   │   ├── message/                        # 파티 내 채팅 메시지 관리
+│   │   │   │   └── service.py                  # 메시지 전송 및 조회 로직
+│   │   │   │
+│   │   │   └── party/                          # 파티 매칭 및 라이프사이클 관리
+│   │   │       ├── repository.py              # 파티 CRUD 및 필터링 쿼리
+│   │   │       ├── router.py                   # 파티 관련 API 엔드포인트
+│   │   │       └── service.py                  # 파티 참여, 생성, 마감 등 비즈니스 로직
+│   │   │
+│   │   ├── config.py                           # 환경 변수 및 공통 설정
+│   │   ├── config_auth.py                      # 인증 관련 보안 설정
+│   │   ├── db.py                               # DB 연결 및 세션 관리
+│   │   └── main.py                             # FastAPI 앱 진입점 및 미들웨어 설정
+│   │
+│   ├── Dockerfile                              # 서버 배포를 위한 도커 설정
+│   ├── docker-compose.yml                      # 컨테이너 오케스트레이션 설정
+│   └── requirements.txt                        # Python 의존성 라이브러리 목록
 │
 ├── baro_database/                              # Supabase 스키마, SQL, DB 초기화, ERD 자료
 │
